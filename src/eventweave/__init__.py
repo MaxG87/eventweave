@@ -29,8 +29,10 @@ def interweave[T, CT: _Comparable](
     """
     if not events:
         return
-    raise ValueError(
-        "This function is not implemented yet. Please check the documentation for "
-        "more information."
-    )
-    yield  # type: ignore[unreachable]
+    if len(events) == 1:
+        for stream in events:
+            for event in stream:
+                _, _, cur = key(event)
+                yield (cur,)
+        return
+    raise NotImplementedError("Interweaving multiple streams is not implemented yet.")
