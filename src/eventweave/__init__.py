@@ -11,7 +11,7 @@ class _Comparable(t.Protocol):
 
 
 def interweave[T, CT: _Comparable](
-    key: t.Callable[[T], tuple[CT, CT]], events: t.Collection[t.Iterable[T]]
+    key: t.Callable[[T], tuple[CT, CT, T]], events: t.Collection[t.Iterable[T]]
 ) -> t.Iterator[tuple[T, ...]]:
     """
     Interweave multiple iterables into an iterator of combinations
@@ -27,7 +27,10 @@ def interweave[T, CT: _Comparable](
         ValueError: If any of the iterables two elements were not chronologically
             sorted.
     """
+    if not events:
+        return
     raise ValueError(
         "This function is not implemented yet. Please check the documentation for "
         "more information."
     )
+    yield  # type: ignore[unreachable]
