@@ -16,3 +16,27 @@ dev = [
     "pytest-xdist>=3.6.1",
     "ruff>=0.11.9",
 ]
+
+[tool.mypy]
+warn_unreachable = true
+enable_error_code = [
+    "possibly-undefined"
+]
+strict = true
+
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov", "src",
+    "--cov-branch",
+    "--cov-fail-under", "85"
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+src = [".", "src/"]
+
+[tool.ruff.lint]
+select = ["A", "B", "C", "F", "I", "ISC", "PIE", "PL", "Q", "RUF", "SIM", "TID", "W", "YTT"]
+ignore = ["E", "PLC1901", "SIM117"]
+mccabe.max-complexity = 6
