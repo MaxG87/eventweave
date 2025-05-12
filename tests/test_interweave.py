@@ -1,3 +1,4 @@
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -37,4 +38,32 @@ def test_interweave_reproduces_duplications(stream, n: int) -> None:  # type: ig
     elements = [stream] * n
     result = list(interweave(key, elements))
     expected = [] if n == 0 else [(cur[2],) * n for cur in stream]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "elements,expected",
+    [
+        (
+            [[("a", "c", "First Element")], [("d", "f", "Last Element")]],
+            [("First Element", None), (None, "Last Element")],
+        ),
+        (
+            [
+                [("a", "c", "First Element")],
+                [("b", "e", "Middle Element")],
+                [("d", "f", "Last Element")],
+            ],
+            [
+                ("First Element", None, None),
+                ("First Element", "Middle Element", None),
+                (None, "Middle Element", "Last Element"),
+                (None, None, "Last Element"),
+            ],
+        ),
+    ],
+)
+def test_interweave_works(elements, expected) -> None:  # type: ignore[no-untyped-def]
+    key = lambda x: (x[0], x[1], x[2])
+    result = list(interweave(key, elements))
     assert result == expected
