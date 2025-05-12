@@ -1,3 +1,4 @@
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -35,4 +36,33 @@ def test_interweave_reproduces_chronologically_ordered_stream(stream) -> None:  
     key = lambda x: (x[0], x[1])
     result = list(interweave(stream, key))
     expected = [{elem} for elem in stream]
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "elements,expected",
+    [
+        (
+            [("a", "c", "First Element"), ("d", "f", "Last Element")],
+            [{("a", "c", "First Element")}, {("d", "f", "Last Element")}],
+        ),
+        (
+            [
+                ("a", "c", "First Element"),
+                ("b", "e", "Middle Element"),
+                ("d", "f", "Last Element"),
+            ],
+            [
+                {("a", "c", "First Element")},
+                {("a", "c", "First Element"), ("b", "e", "Middle Element")},
+                {("b", "e", "Middle Element")},
+                {("b", "e", "Middle Element"), ("d", "f", "Last Element")},
+                {("d", "f", "Last Element")},
+            ],
+        ),
+    ],
+)
+def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
+    key = lambda x: (x[0], x[1])
+    result = list(interweave(elements, key))
     assert result == expected
