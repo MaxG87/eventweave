@@ -44,6 +44,24 @@ def test_interweave_reproduces_chronologically_ordered_stream[T](
     assert result == expected
 
 
+@given(
+    stream=st.lists(
+        st.tuples(st.integers(), st.integers(), st.floats())
+        .filter(lambda x: x[0] < x[1])
+        .map(lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])),
+    )
+)
+def test_interweave_yields_all_events_eventually[T](
+    stream: list[T],
+) -> None:
+    key = lambda x: (x[0], x[1])
+    all_events = set(stream)
+    result_events = set()
+    for result in interweave(stream, key):
+        result_events.update(result)
+    assert result_events.issubset(all_events)
+
+
 @pytest.mark.parametrize(
     "elements,expected",
     [
