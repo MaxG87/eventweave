@@ -28,7 +28,8 @@ strict = true
 addopts = [
     "--cov", "src",
     "--cov-branch",
-    "--cov-fail-under", "85"
+    "--cov-fail-under", "85",
+    "--doctest-glob", "*.md",
 ]
 testpaths = ["tests"]
 
