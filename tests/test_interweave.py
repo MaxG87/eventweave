@@ -115,3 +115,23 @@ def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
     for perm in permutations(elements):
         result = list(interweave(perm, key))
         assert result == expected
+
+
+@given(
+    valid_stream=st.lists(
+        st.tuples(st.integers(), st.integers(), st.floats())
+        .filter(lambda x: x[0] < x[1])
+        .map(lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])),
+    ),
+    invalid_element=st.tuples(st.integers(), st.integers(), st.floats()).map(
+        lambda x: (max(x[0], x[1]), min(x[0], x[1]), x[2])
+    ),
+)
+def test_interweave_raises_value_error[T](
+    valid_stream: list[T], invalid_element: T
+) -> None:
+    key = lambda x: (x[0], x[1])
+    # list.set is a poor mans shuffle
+    new_stream = list({*valid_stream, invalid_element})
+    with pytest.raises(ValueError):
+        list(interweave(new_stream, key))

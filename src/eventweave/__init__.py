@@ -66,8 +66,8 @@ def interweave(  # noqa: C901
     end_to_elems = defaultdict(set)
     for elem in events:
         begin, end = key(elem)
-        # if end < begin:
-        #     raise ValueError("End time must be greater than or equal to begin time.")
+        if end <= begin:
+            raise ValueError("End time must be greater than or equal to begin time.")
         begin_to_elems[begin].add(elem)
         end_to_elems[end].add(elem)
 
