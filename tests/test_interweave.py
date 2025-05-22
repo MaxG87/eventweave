@@ -1,3 +1,5 @@
+from itertools import permutations
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -20,7 +22,8 @@ def non_overlapping_intervals[T](
         next_end = next_begin + end_delta
         intervals.append((next_begin, next_end, next_value))
         cur_end = next_end
-    return intervals
+    permutation = draw(st.permutations(intervals))
+    return permutation
 
 
 def test_no_event_iters() -> None:
@@ -32,10 +35,12 @@ def test_no_event_iters() -> None:
 @given(
     stream=non_overlapping_intervals(st.integers()),
 )
-def test_interweave_reproduces_chronologically_ordered_stream(stream) -> None:  # type: ignore[no-untyped-def]
+def test_interweave_reproduces_chronologically_ordered_stream[T](
+    stream: list[T],
+) -> None:
     key = lambda x: (x[0], x[1])
     result = list(interweave(stream, key))
-    expected = [{elem} for elem in stream]
+    expected = [{elem} for elem in sorted(stream)]  # type: ignore[type-var]
     assert result == expected
 
 
@@ -64,5 +69,7 @@ def test_interweave_reproduces_chronologically_ordered_stream(stream) -> None:  
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
     key = lambda x: (x[0], x[1])
-    result = list(interweave(elements, key))
-    assert result == expected
+
+    for perm in permutations(elements):
+        result = list(interweave(perm, key))
+        assert result == expected

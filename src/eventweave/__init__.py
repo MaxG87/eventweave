@@ -36,8 +36,7 @@ def interweave(  # noqa: C901
             the iterable of events.
 
     Raises:
-        ValueError: If any of the iterables two elements were not chronologically
-            sorted.
+        ValueError: If for any event the end time is less than the begin time.
     """
     begin_to_elems = defaultdict(set)
     end_to_elems = defaultdict(set)
