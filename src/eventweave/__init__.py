@@ -10,9 +10,9 @@ class _Comparable(t.Protocol):
         pass
 
 
-def interweave[T, CT: _Comparable](
-    key: t.Callable[[T], tuple[CT, CT, T]], events: t.Collection[t.Iterable[T]]
-) -> t.Iterator[tuple[T | None, ...]]:
+def interweave[T, CT: _Comparable | t.Hashable](
+    events: t.Iterable[T], key: t.Callable[[T], tuple[CT, CT]]
+) -> t.Iterator[set[T]]:
     """
     Interweave multiple iterables into an iterator of combinations
 
@@ -29,12 +29,10 @@ def interweave[T, CT: _Comparable](
     """
     if not events:
         return
-    streams_with_index = [iter(cur) for cur in events]
-    # TODO: Handle possibly isolated events
+    stream = iter(events)
     while True:
         try:
-            next_elements = [next(stream) for stream in streams_with_index]
+            next_elem = next(stream)
         except StopIteration:
             return
-        unpacked = [key(cur) for cur in next_elements]
-        yield tuple(cur[2] for cur in unpacked)
+        yield {next_elem}
