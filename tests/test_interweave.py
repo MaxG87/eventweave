@@ -65,6 +65,30 @@ def test_interweave_reproduces_chronologically_ordered_stream[T](
                 {("d", "f", "Last Element")},
             ],
         ),
+        (
+            [
+                "01Element",
+                "12Element",
+                "23Element",
+                "34Element",
+                "45Element",
+                "56Element",
+                "67Element",
+                "78Element",
+                "89Element",
+            ],
+            [
+                {"01Element"},
+                {"12Element"},
+                {"23Element"},
+                {"34Element"},
+                {"45Element"},
+                {"56Element"},
+                {"67Element"},
+                {"78Element"},
+                {"89Element"},
+            ],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:

@@ -5,13 +5,16 @@ from collections import defaultdict
 class _IntervalBound(t.Protocol):
     """Protocol for annotating comparable types."""
 
-    def __lt__(self: t.Self, other: t.Any) -> bool:
+    def __lt__(self, other: t.Any) -> bool:
         pass
 
-    def __le__(self: t.Self, other: t.Any) -> bool:
+    def __le__(self, other: t.Any) -> bool:
         pass
 
-    def __hash__(self: t.Self) -> int:
+    def __eq__(self, other: object) -> bool:
+        pass
+
+    def __hash__(self) -> int:
         pass
 
 
@@ -59,10 +62,10 @@ def interweave(  # noqa: C901
     for next_begin in begin_times:
         yield combination.copy()
         while True:
-            if next_begin <= end_times[end_times_idx]:
+            end_time = end_times[end_times_idx]
+            if next_begin < end_time:
                 break
-            next_end_time = end_times[end_times_idx]
-            combination.difference_update(end_to_elems[next_end_time])
+            combination.difference_update(end_to_elems[end_time])
             if len(combination) != 0:
                 yield combination.copy()
             end_times_idx += 1
