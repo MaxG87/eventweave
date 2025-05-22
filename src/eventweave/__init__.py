@@ -27,19 +27,40 @@ def interweave(  # noqa: C901
     events: t.Iterable[_T], key: t.Callable[[_T], tuple[_CT, _CT]]
 ) -> t.Iterator[set[_T]]:
     """
-    Interweave multiple iterables into an iterator of combinations
+    Interweave an iterable of events into a chronological iterator of active combinations
 
-    Args:
-        events: Iterable of events to interweave.
-        key: A function that takes an event and returns the begin and end times of the
-             event.
+    This function takes an iterable of events and yields combinations of events that are
+    simultaneously active at some point in time.
+
+    An event is considered active at time `T` if `key(event)[0] <= T <= key(event)[1]`.
+    Each yielded combination is a set of events that share such a time `T`. Combinations
+    are emitted in chronological order based on the start times of the events.
+
+    If two events overlap exactly at a single point `T`, where one ends at `T` and the
+    other begins at `T`, they are **not** considered overlapping. It is assumed that the
+    second event ends an infinitesimal moment after `T`, making the events
+    non-simultaneous. This allows conveniently representing sequential but
+    non-overlapping events as distinct.
+
+    The algorithm takes O(n) space and O(n log n) time, where n is the number of events.
+    Therefore, it is not suitable for extremely large streams of events.
+
+    Parameters
+    ----------
+    events:
+        iterable of events to interweave
+    key:
+        a function that takes an event and returns the begin and end times of the event
 
     Yields:
-        tuple: A tuple containing the chronologically next combination of elements from
-            the iterable of events.
+    -------
+    set[T]
+        A tuple containing the chronologically next combination of elements from the
+        iterable of events.
 
     Raises:
-        ValueError: If for any event the end time is less than the begin time.
+    -------
+    ValueError: If for any event the end time is less than the begin time.
     """
     begin_to_elems = defaultdict(set)
     end_to_elems = defaultdict(set)
