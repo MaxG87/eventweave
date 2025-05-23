@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/MaxG87/eventweave/compare/v0.1.0...v0.2.0) (2025-05-23)
+
+
+### Features
+
+* Lower minimum Python version to 3.10 ([313b20b](https://github.com/MaxG87/eventweave/commit/313b20b565c61f247c7f36280da34e4c8ad55d50))
+* Return frozensets of events ([7db4d96](https://github.com/MaxG87/eventweave/commit/7db4d96fd52fc9b3cfa5e514dc78f896f609c3c5))
+
+
+### Documentation
+
+* Add example usage to docstring ([792aa3a](https://github.com/MaxG87/eventweave/commit/792aa3a313090aec55db63f105f367ec5cb782ce))
+* Add project README ([b7647ee](https://github.com/MaxG87/eventweave/commit/b7647eedacec69cec824008acd2f21b597212c10))
+* Include README to PyPI description ([65aee2b](https://github.com/MaxG87/eventweave/commit/65aee2bfb7c0a99812e62ddf8f30b488df5fa3b6))
+* Mention two edge cases not yet supported ([8cc1daa](https://github.com/MaxG87/eventweave/commit/8cc1daa348443e0a8f6b6e876122f33cba5961dc))
+* Test that code examples in README are correct ([58073c3](https://github.com/MaxG87/eventweave/commit/58073c311f7c94a0b46f0c8a87908b45ab6a2e93))
+
 ## 0.1.0 (2025-05-22)
 
 
