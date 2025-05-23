@@ -25,7 +25,7 @@ _CT = t.TypeVar("_CT", bound=_IntervalBound)
 
 def interweave(  # noqa: C901
     events: t.Iterable[_T], key: t.Callable[[_T], tuple[_CT, _CT]]
-) -> t.Iterator[set[_T]]:
+) -> t.Iterator[frozenset[_T]]:
     """
     Interweave an iterable of events into a chronological iterator of active combinations
 
@@ -33,8 +33,9 @@ def interweave(  # noqa: C901
     simultaneously active at some point in time.
 
     An event is considered active at time `T` if `key(event)[0] <= T <= key(event)[1]`.
-    Each yielded combination is a set of events that share such a time `T`. Combinations
-    are emitted in chronological order based on the start times of the events.
+    Each yielded combination is a frozenset of events that share such a time `T`.
+    Combinations are emitted in chronological order based on the start times of the
+    events.
 
     If two events overlap exactly at a single point `T`, where one ends at `T` and the
     other begins at `T`, they are **not** considered overlapping. It is assumed that the
@@ -54,7 +55,7 @@ def interweave(  # noqa: C901
 
     Yields:
     -------
-    set[T]
+    frozenset[T]
         A tuple containing the chronologically next combination of elements from the
         iterable of events.
 
@@ -107,22 +108,22 @@ def interweave(  # noqa: C901
     end_times_idx = 0
 
     first_begin = next(begin_times)
-    combination: set[_T] = begin_to_elems[first_begin]
+    combination = frozenset(begin_to_elems[first_begin])
 
     for next_begin in begin_times:
-        yield combination.copy()
+        yield combination
         while True:
             end_time = end_times[end_times_idx]
             if next_begin < end_time:
                 break
-            combination.difference_update(end_to_elems[end_time])
+            combination = combination.difference(end_to_elems[end_time])
             if len(combination) != 0:
-                yield combination.copy()
+                yield combination
             end_times_idx += 1
-        combination.update(begin_to_elems[next_begin])
+        combination = combination.union(begin_to_elems[next_begin])
 
     for next_end_time in end_times[end_times_idx:]:
-        yield combination.copy()
-        combination.difference_update(end_to_elems[next_end_time])
+        yield combination
+        combination = combination.difference(end_to_elems[next_end_time])
         if len(combination) == 0:
             return

@@ -56,7 +56,7 @@ def test_interweave_yields_all_events_eventually[T](
 ) -> None:
     key = lambda x: (x[0], x[1])
     all_events = set(stream)
-    result_events = set()
+    result_events: set[T] = set()
     for result in interweave(stream, key):
         result_events.update(result)
     assert result_events.issubset(all_events)
