@@ -50,8 +50,18 @@ Use interweave to iterate over overlapping combinations:
     ... ]
     >>> assert result == expected
 
-### Overlap Rules
+## Clarification of Overlapping Events
 
 If one event ends at time `T` and another begins at time `T`, they are **not
 considered overlapping**. The model assumes the starting event ends just after
 `T` to preserve strict separation of events that merely touch.
+
+This handling of edge cases can lead to surprising results in certain
+situations. For example, if a long-running event spans two shorter events - where
+the first ends exactly when the second starts - an additional combination may
+currently be produced that contains only the long-running event. This behavior
+may change in future versions.
+
+Currently, instantaneous events - where the start and end times are the same -
+are not supported. Support will be added once their semantics are clearly
+defined.
