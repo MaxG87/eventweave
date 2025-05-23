@@ -61,6 +61,35 @@ def interweave(  # noqa: C901
     Raises:
     -------
     ValueError: If for any event the end time is less than the begin time.
+
+    Examples
+    --------
+    >>> from dataclasses import dataclass
+    >>> from eventweave import interweave
+    >>>
+    >>> @dataclass(frozen=True)
+    ... class Event:
+    ...         begin: str
+    ...         end: str
+    >>>
+    >>> events = [
+    ...     Event("2022-01-01", "2025-01-01"),
+    ...     Event("2023-01-01", "2023-01-03"),
+    ...     Event("2023-01-02", "2023-01-04"),
+    ... ]
+    >>> result = list(interweave(events, lambda e: (e.begin, e.end)))
+    >>> expected = [
+    ...     {Event("2022-01-01", "2025-01-01")},
+    ...     {Event("2022-01-01", "2025-01-01"), Event("2023-01-01", "2023-01-03")},
+    ...     {
+    ...         Event("2022-01-01", "2025-01-01"),
+    ...         Event("2023-01-01", "2023-01-03"),
+    ...         Event("2023-01-02", "2023-01-04"),
+    ...     },
+    ...     {Event("2022-01-01", "2025-01-01"), Event("2023-01-02", "2023-01-04")},
+    ...     {Event("2022-01-01", "2025-01-01")},
+    ... ]
+    >>> assert result == expected
     """
     begin_to_elems = defaultdict(set)
     end_to_elems = defaultdict(set)

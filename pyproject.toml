@@ -30,6 +30,7 @@ addopts = [
     "--cov-branch",
     "--cov-fail-under", "85",
     "--doctest-glob", "*.md",
+    "--doctest-modules",
 ]
 testpaths = ["tests"]
 
