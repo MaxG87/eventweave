@@ -32,7 +32,6 @@ addopts = [
     "--doctest-glob", "*.md",
     "--doctest-modules",
 ]
-testpaths = ["tests"]
 
 [tool.ruff]
 src = [".", "src/"]
