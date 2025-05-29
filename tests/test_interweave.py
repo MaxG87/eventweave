@@ -104,6 +104,30 @@ def test_interweave_yields_all_events_eventually[T](
                 {(1, 1000, "1-1000")},
             ],
         ),
+        (
+            [
+                (1, 6, "Long Running Event"),
+                (2, 3, "Early Short Event"),
+                (3, 4, "Middle Short Event"),
+                (4, 5, "Late Short Event"),
+            ],
+            [
+                {(1, 6, "Long Running Event")},  # for T in [1, 2]
+                {  # for T in ]2, 3]
+                    (1, 6, "Long Running Event"),
+                    (2, 3, "Early Short Event"),
+                },
+                {  # for T in ]3, 4]
+                    (1, 6, "Long Running Event"),
+                    (3, 4, "Middle Short Event"),
+                },
+                {  # for T in ]4, 5]
+                    (1, 6, "Long Running Event"),
+                    (4, 5, "Late Short Event"),
+                },
+                {(1, 6, "Long Running Event")},  # for T in ]5, 6]
+            ],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:

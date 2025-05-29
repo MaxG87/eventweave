@@ -117,7 +117,7 @@ def interweave(  # noqa: C901
             if next_begin < end_time:
                 break
             combination = combination.difference(end_to_elems[end_time])
-            if len(combination) != 0:
+            if len(combination) != 0 and end_time not in begin_to_elems:
                 yield combination
             end_times_idx += 1
         combination = combination.union(begin_to_elems[next_begin])
