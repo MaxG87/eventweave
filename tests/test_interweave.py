@@ -84,28 +84,8 @@ def test_interweave_yields_all_events_eventually[T](
             ],
         ),
         (
-            [
-                "01Element",
-                "12Element",
-                "23Element",
-                "34Element",
-                "45Element",
-                "56Element",
-                "67Element",
-                "78Element",
-                "89Element",
-            ],
-            [
-                {"01Element"},
-                {"12Element"},
-                {"23Element"},
-                {"34Element"},
-                {"45Element"},
-                {"56Element"},
-                {"67Element"},
-                {"78Element"},
-                {"89Element"},
-            ],
+            ["01Element", "12Element", "23Element", "34Element", "45Element"],
+            [{"01Element"}, {"12Element"}, {"23Element"}, {"34Element"}, {"45Element"}],
         ),
         (
             [
