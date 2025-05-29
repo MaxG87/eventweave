@@ -19,13 +19,13 @@ class _IntervalBound(t.Protocol):
 
 
 _IntervalBoundT = t.TypeVar("_IntervalBoundT", bound=_IntervalBound)
-_T = t.TypeVar("_T", bound=t.Hashable)
+_Event = t.TypeVar("_Event", bound=t.Hashable)
 
 
 def interweave(  # noqa: C901
-    events: t.Iterable[_T],
-    key: t.Callable[[_T], tuple[_IntervalBoundT, _IntervalBoundT]],
-) -> t.Iterator[frozenset[_T]]:
+    events: t.Iterable[_Event],
+    key: t.Callable[[_Event], tuple[_IntervalBoundT, _IntervalBoundT]],
+) -> t.Iterator[frozenset[_Event]]:
     """
     Interweave an iterable of events into a chronological iterator of active combinations
 
