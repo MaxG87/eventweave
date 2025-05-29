@@ -8,34 +8,40 @@ permissions:
   contents: read
 
 jobs:
-  build-dist:
+  build:
     runs-on: ubuntu-latest
+    name: Build distribution 📦
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     - name: Install uv
       run: pipx install 'uv==0.7.3'
-    - name: Publish package
+    - name: Build distribution with uv
       run: |
         uv build
     - uses: actions/upload-artifact@v4
       with:
-        name: dist
+        name: python-package-distributions
         path: dist/
 
-  pypi-publish:
-    name: upload release to PyPI
-    needs: [build-dist]
+  publish-to-pypi:
+    name: >-
+      Publish Python 🐍 distribution 📦 to PyPI
+    needs:
+      - build
     runs-on: ubuntu-latest
-    # Specifying a GitHub environment is optional, but strongly encouraged
-    environment: pypi
+    environment:
+      name: pypi
+      url: https://pypi.org/p/eventweave
     permissions:
-      # IMPORTANT: this permission is mandatory for Trusted Publishing
       id-token: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
