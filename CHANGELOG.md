@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/MaxG87/eventweave/compare/v0.2.0...v0.3.0) (2025-05-29)
+
+
+### Continuous Integration
+
+* Fix automated publishing to PyPI ([252e942](https://github.com/MaxG87/eventweave/commit/252e942b4f8a91bc075378d407e070c59956a7cd))
+
 ## [0.2.0](https://github.com/MaxG87/eventweave/compare/v0.1.0...v0.2.0) (2025-05-23)
 
 
