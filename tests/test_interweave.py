@@ -1,3 +1,4 @@
+import math
 from itertools import permutations
 
 import pytest
@@ -5,6 +6,9 @@ from hypothesis import example, given
 from hypothesis import strategies as st
 
 from eventweave import interweave
+
+_E = math.exp(1)
+_PI = math.pi
 
 
 @st.composite
@@ -139,16 +143,20 @@ def test_interweave_yields_all_events_eventually[T](
         ),
         ([(1, 2, 0), (3, 3, 0)], [{(1, 2, 0)}, {(3, 3, 0)}]),
         (
-            [(0, 3, 3.14), (1, 1, 0.0), (2, 2, 0.0)],
+            [(0, 3, _PI), (1, 1, _PI), (2, 2, _PI)],
             [
-                {(0, 3, 3.14)},
-                {(0, 3, 3.14), (1, 1, 0.0)},
-                {(0, 3, 3.14)},
-                {(0, 3, 3.14), (2, 2, 0.0)},
-                {(0, 3, 3.14)},
+                {(0, 3, _PI)},
+                {(0, 3, _PI), (1, 1, _PI)},
+                {(0, 3, _PI)},
+                {(0, 3, _PI), (2, 2, _PI)},
+                {(0, 3, _PI)},
             ],
         ),
         ([(1, 2, 0), (3, 3, 0), (4, 5, 0)], [{(1, 2, 0)}, {(3, 3, 0)}, {(4, 5, 0)}]),
+        (
+            [(1, 3, _E), (3, 3, _E), (3, 5, _E)],
+            [{(1, 3, _E)}, {(1, 3, _E), (3, 3, _E)}, {(3, 5, _E)}],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
