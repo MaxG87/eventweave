@@ -9,6 +9,7 @@ from eventweave import interweave
 
 _E = math.exp(1)
 _PI = math.pi
+_PHI = (math.sqrt(5) + 1) / 2
 
 
 @st.composite
@@ -156,6 +157,23 @@ def test_interweave_yields_all_events_eventually[T](
         (
             [(1, 3, _E), (3, 3, _E), (3, 5, _E)],
             [{(1, 3, _E)}, {(1, 3, _E), (3, 3, _E)}, {(3, 5, _E)}],
+        ),
+        (
+            [
+                (1, 3, _PHI),
+                (3, 3, _PHI),
+                (3, 3, _E),
+                (3, 3, 1337),
+                (3, 5, _PHI),
+                (5, 5, _PHI),
+                (5, 5, 1337),
+            ],
+            [
+                {(1, 3, _PHI)},
+                {(1, 3, _PHI), (3, 3, _PHI), (3, 3, _E), (3, 3, 1337)},
+                {(3, 5, _PHI)},
+                {(3, 5, _PHI), (5, 5, _PHI), (5, 5, 1337)},
+            ],
         ),
     ],
 )
