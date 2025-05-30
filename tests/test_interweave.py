@@ -1,7 +1,7 @@
 from itertools import permutations
 
 import pytest
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from eventweave import interweave
@@ -35,6 +35,7 @@ def test_no_event_iters() -> None:
 @given(
     stream=non_overlapping_intervals(st.integers()),
 )
+@example(stream=[(1, 2, 1), (3, 4, 2), (5, 6, 3)])
 def test_interweave_reproduces_chronologically_ordered_stream[T](
     stream: list[T],
 ) -> None:
