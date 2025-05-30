@@ -153,8 +153,13 @@ def interweave(  # noqa: C901
         )
         yield from combinations_with_atomic_events
         combination = combination.difference(end_to_elems[next_end_time])
-        if len(combination) == 0:
-            return
+
+    yield from _handle_case_of_only_atomic_events(
+        {
+            bound: atomic_events[bound]
+            for bound in begin_times_of_atomic_events[begin_times_of_atomic_events_idx:]
+        }
+    )
 
 
 def _handle_case_of_only_atomic_events[
