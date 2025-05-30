@@ -120,7 +120,6 @@ def interweave(  # noqa: C901
         _handle_atomic_events(
             begin_times_of_atomic_events,
             0,
-            begin_to_elems.keys(),
             atomic_events,
             frozenset(),
             first_begin,
@@ -137,10 +136,9 @@ def interweave(  # noqa: C901
                 _handle_atomic_events(
                     begin_times_of_atomic_events,
                     begin_times_of_atomic_events_idx,
-                    begin_to_elems.keys(),
                     atomic_events,
                     combination,
-                    end_time,
+                    min(next_begin, end_time),
                 )
             )
             yield from combinations_with_atomic_events
@@ -158,7 +156,6 @@ def interweave(  # noqa: C901
             _handle_atomic_events(
                 begin_times_of_atomic_events,
                 begin_times_of_atomic_events_idx,
-                begin_to_elems.keys(),
                 atomic_events,
                 combination,
                 next_end_time,
@@ -183,10 +180,9 @@ def _handle_case_of_only_atomic_events[
         yield frozenset(events)
 
 
-def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: PLR0913
+def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](
     begin_times_of_atomics: list[IntervalBound],
     begin_times_of_atomics_idx: int,
-    begin_times_of_events_with_span: t.KeysView[IntervalBound],
     bound_to_events: dict[IntervalBound, set[Event]],
     active_combination: frozenset[Event],
     until: IntervalBound,
@@ -200,10 +196,7 @@ def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](  # 
         if start_end > until:
             break
         combinations.append(active_combination.union(bound_to_events[start_end]))
-        if (
-            len(active_combination) > 0
-            and start_end not in begin_times_of_events_with_span
-        ):
+        if len(active_combination) > 0 and start_end != until:
             combinations.append(active_combination)
         begin_times_of_atomics_idx += 1
     return begin_times_of_atomics_idx, combinations
