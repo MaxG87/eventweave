@@ -116,6 +116,16 @@ def interweave(  # noqa: C901
     end_times_idx = 0
 
     first_begin = next(begin_times)
+    begin_times_of_atomic_events_idx, combinations_with_atomic_events = (
+        _handle_atomic_events(
+            begin_times_of_atomic_events,
+            0,
+            atomic_events,
+            frozenset(),
+            first_begin,
+        )
+    )
+    yield from combinations_with_atomic_events
     combination = frozenset(begin_to_elems[first_begin])
 
     for next_begin in begin_times:
@@ -171,6 +181,7 @@ def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](
         if start_end > until:
             break
         combinations.append(active_combination.union(bound_to_events[start_end]))
-        combinations.append(active_combination)
+        if len(active_combination) > 0:
+            combinations.append(active_combination)
         idx += 1
     return idx, combinations
