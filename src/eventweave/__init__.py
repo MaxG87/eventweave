@@ -99,8 +99,8 @@ def interweave(  # noqa: C901
     """
     begin_to_elems, end_to_elems, atomic_events = _consume_event_stream(events, key)
 
-    if len(begin_to_elems) == 0:
-        if len(atomic_events) > 0:
+    if not _has_elements(begin_to_elems):
+        if _has_elements(atomic_events):
             yield from _handle_case_of_only_atomic_events(atomic_events)
         return
     begin_times = iter(sorted(begin_to_elems))
@@ -149,7 +149,7 @@ def interweave(  # noqa: C901
             if next_begin < end_time:
                 break
             combination = combination.difference(end_to_elems[end_time])
-            if len(combination) != 0 and end_time not in begin_to_elems:
+            if _has_elements(combination) and end_time not in begin_to_elems:
                 yield combination
             end_times_idx += 1
         combination = combination.union(begin_to_elems[next_begin])
@@ -174,6 +174,10 @@ def interweave(  # noqa: C901
             for bound in begin_times_of_atomic_events[begin_times_of_atomic_events_idx:]
         }
     )
+
+
+def _has_elements(collection: t.Sized) -> bool:
+    return len(collection) > 0
 
 
 def _consume_event_stream[Event, IntervalBound: _IntervalBound](
@@ -243,7 +247,7 @@ def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](
         if start_end > until:
             break
         combinations.append(active_combination.union(bound_to_events[start_end]))
-        if len(active_combination) > 0 and start_end != until:
+        if _has_elements(active_combination) and start_end != until:
             combinations.append(active_combination)
         begin_times_of_atomics_idx += 1
     return begin_times_of_atomics_idx, combinations
