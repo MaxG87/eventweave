@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.1](https://github.com/MaxG87/eventweave/compare/v0.3.0...v0.3.1) (2025-05-30)
+
+
+### Bug Fixes
+
+* Correctly handle back-to-back events ([6e989ce](https://github.com/MaxG87/eventweave/commit/6e989ce2cf9fd82b4c800e727d67844d252f71b4))
+* Handle back-to-back events correctly ([87b8b19](https://github.com/MaxG87/eventweave/commit/87b8b19f6ed99abec824b2daf0330c24c13a6f61))
+
+
+### Dependencies
+
+* Relock dependencies ([bfea356](https://github.com/MaxG87/eventweave/commit/bfea356ff6fd83b3d5a0acefdad2239e22df3f8a))
+
 ## [0.3.0](https://github.com/MaxG87/eventweave/compare/v0.2.0...v0.3.0) (2025-05-29)
 
 
