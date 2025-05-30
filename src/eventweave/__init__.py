@@ -94,16 +94,22 @@ def interweave(  # noqa: C901
     """
     begin_to_elems = defaultdict(set)
     end_to_elems = defaultdict(set)
+    atomic_events = defaultdict(set)
     for elem in events:
         begin, end = key(elem)
-        if end <= begin:
+        if begin < end:
+            begin_to_elems[begin].add(elem)
+            end_to_elems[end].add(elem)
+        elif begin == end:
+            atomic_events[begin].add(elem)
+        else:
             raise ValueError("End time must be greater than or equal to begin time.")
-        begin_to_elems[begin].add(elem)
-        end_to_elems[end].add(elem)
 
-    if len(begin_to_elems) == 0:
+    if len(begin_to_elems) == 0 and len(atomic_events) == 0:
         return
     begin_times = iter(sorted(begin_to_elems))
+    begin_times_of_atomic_events = sorted(atomic_events)
+    begin_times_of_atomic_events_idx = 0
     end_times = sorted(end_to_elems)
     end_times_idx = 0
 
@@ -124,6 +130,37 @@ def interweave(  # noqa: C901
 
     for next_end_time in end_times[end_times_idx:]:
         yield combination
+        begin_times_of_atomic_events_idx, combinations_with_atomic_events = (
+            _handle_atomic_events(
+                begin_times_of_atomic_events,
+                begin_times_of_atomic_events_idx,
+                atomic_events,
+                combination,
+                next_end_time,
+            )
+        )
+        yield from combinations_with_atomic_events
         combination = combination.difference(end_to_elems[next_end_time])
         if len(combination) == 0:
             return
+
+
+def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](
+    begin_times: list[IntervalBound],
+    idx: int,
+    bound_to_events: dict[IntervalBound, set[Event]],
+    active_combination: frozenset[Event],
+    until: IntervalBound,
+) -> tuple[int, list[frozenset[Event]]]:
+    combinations = []
+    while True:
+        try:
+            start_end = begin_times[idx]
+        except IndexError:
+            break
+        if start_end > until:
+            break
+        combinations.append(active_combination.union(bound_to_events[start_end]))
+        combinations.append(active_combination)
+        idx += 1
+    return idx, combinations

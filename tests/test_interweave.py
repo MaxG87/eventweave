@@ -129,6 +129,16 @@ def test_interweave_yields_all_events_eventually[T](
                 {(1, 6, "Long Running Event")},  # for T in ]5, 6]
             ],
         ),
+        (
+            [(0, 3, 3.14), (1, 1, 0.0), (2, 2, 0.0)],
+            [
+                {(0, 3, 3.14)},
+                {(0, 3, 3.14), (1, 1, 0.0)},
+                {(0, 3, 3.14)},
+                {(0, 3, 3.14), (2, 2, 0.0)},
+                {(0, 3, 3.14)},
+            ],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
@@ -141,13 +151,13 @@ def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
 
 @given(
     valid_stream=st.lists(
-        st.tuples(st.integers(), st.integers(), st.floats())
-        .filter(lambda x: x[0] < x[1])
-        .map(lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])),
+        st.tuples(st.integers(), st.integers(), st.floats()).map(
+            lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])
+        ),
     ),
-    invalid_element=st.tuples(st.integers(), st.integers(), st.floats()).map(
-        lambda x: (max(x[0], x[1]), min(x[0], x[1]), x[2])
-    ),
+    invalid_element=st.tuples(st.integers(), st.integers(), st.floats())
+    .filter(lambda x: x[0] != x[1])
+    .map(lambda x: (max(x[0], x[1]), min(x[0], x[1]), x[2])),
 )
 def test_interweave_raises_value_error[T](
     valid_stream: list[T], invalid_element: T
