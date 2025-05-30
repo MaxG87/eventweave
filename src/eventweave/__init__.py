@@ -132,6 +132,16 @@ def interweave(  # noqa: C901
         yield combination
         while True:
             end_time = end_times[end_times_idx]
+            begin_times_of_atomic_events_idx, combinations_with_atomic_events = (
+                _handle_atomic_events(
+                    begin_times_of_atomic_events,
+                    begin_times_of_atomic_events_idx,
+                    atomic_events,
+                    combination,
+                    end_time,
+                )
+            )
+            yield from combinations_with_atomic_events
             if next_begin < end_time:
                 break
             combination = combination.difference(end_to_elems[end_time])

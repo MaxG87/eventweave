@@ -148,6 +148,7 @@ def test_interweave_yields_all_events_eventually[T](
                 {(0, 3, 3.14)},
             ],
         ),
+        ([(1, 2, 0), (3, 3, 0), (4, 5, 0)], [{(1, 2, 0)}, {(3, 3, 0)}, {(4, 5, 0)}]),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
