@@ -117,11 +117,21 @@ def interweave(  # noqa: C901
 
     first_begin = next(begin_times)
     begin_times_of_atomic_events_idx, combinations_with_atomic_events = (
+        _handle_leading_atomic_events(
+            begin_times_of_atomic_events,
+            atomic_events,
+            first_begin,
+        )
+    )
+    yield from combinations_with_atomic_events
+
+    combination = frozenset(begin_to_elems[first_begin])
+    begin_times_of_atomic_events_idx, combinations_with_atomic_events = (
         _handle_atomic_events(
             begin_times_of_atomic_events,
-            0,
+            begin_times_of_atomic_events_idx,
             atomic_events,
-            frozenset(),
+            combination,
             first_begin,
         )
     )
@@ -178,6 +188,25 @@ def _handle_case_of_only_atomic_events[
 ](atomic_events: dict[IntervalBound, set[Event]]) -> t.Iterable[frozenset[Event]]:
     for _, events in sorted(atomic_events.items()):
         yield frozenset(events)
+
+
+def _handle_leading_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](
+    begin_times_of_atomics: list[IntervalBound],
+    bound_to_events: dict[IntervalBound, set[Event]],
+    until: IntervalBound,
+) -> tuple[int, list[frozenset[Event]]]:
+    begin_times_of_atomics_idx = 0
+    combinations = []
+    while True:
+        try:
+            start_end = begin_times_of_atomics[begin_times_of_atomics_idx]
+        except IndexError:
+            break
+        if start_end >= until:
+            break
+        combinations.append(frozenset(bound_to_events[start_end]))
+        begin_times_of_atomics_idx += 1
+    return begin_times_of_atomics_idx, combinations
 
 
 def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](

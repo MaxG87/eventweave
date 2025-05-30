@@ -175,6 +175,16 @@ def test_interweave_yields_all_events_eventually[T](
                 {(3, 5, _PHI), (5, 5, _PHI), (5, 5, 1337)},
             ],
         ),
+        (
+            [(1, 1, _PI), (1, 3, _PHI), (3, 3, 1337), (3, 5, _PHI), (5, 5, 1337)],
+            [
+                {(1, 1, _PI), (1, 3, _PHI)},
+                {(1, 3, _PHI)},
+                {(1, 3, _PHI), (3, 3, 1337)},
+                {(3, 5, _PHI)},
+                {(3, 5, _PHI), (5, 5, 1337)},
+            ],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
