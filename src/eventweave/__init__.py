@@ -97,18 +97,7 @@ def interweave(  # noqa: C901
     ... ]
     >>> assert result == expected
     """
-    begin_to_elems = defaultdict(set)
-    end_to_elems = defaultdict(set)
-    atomic_events = defaultdict(set)
-    for elem in events:
-        begin, end = key(elem)
-        if begin < end:
-            begin_to_elems[begin].add(elem)
-            end_to_elems[end].add(elem)
-        elif begin == end:
-            atomic_events[begin].add(elem)
-        else:
-            raise ValueError("End time must be greater than or equal to begin time.")
+    begin_to_elems, end_to_elems, atomic_events = _consume_event_stream(events, key)
 
     if len(begin_to_elems) == 0:
         if len(atomic_events) > 0:
@@ -185,6 +174,30 @@ def interweave(  # noqa: C901
             for bound in begin_times_of_atomic_events[begin_times_of_atomic_events_idx:]
         }
     )
+
+
+def _consume_event_stream[Event, IntervalBound: _IntervalBound](
+    stream: t.Iterable[Event],
+    key: t.Callable[[Event], tuple[IntervalBound, IntervalBound]],
+) -> tuple[
+    dict[IntervalBound, set[Event]],
+    dict[IntervalBound, set[Event]],
+    dict[IntervalBound, set[Event]],
+]:
+    begin_to_elems = defaultdict(set)
+    end_to_elems = defaultdict(set)
+    atomic_events = defaultdict(set)
+
+    for elem in stream:
+        begin, end = key(elem)
+        if begin < end:
+            begin_to_elems[begin].add(elem)
+            end_to_elems[end].add(elem)
+        elif begin == end:
+            atomic_events[begin].add(elem)
+        else:
+            raise ValueError("End time must be greater than or equal to begin time.")
+    return begin_to_elems, end_to_elems, atomic_events
 
 
 def _handle_case_of_only_atomic_events[
