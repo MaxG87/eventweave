@@ -105,7 +105,9 @@ def interweave(  # noqa: C901
         else:
             raise ValueError("End time must be greater than or equal to begin time.")
 
-    if len(begin_to_elems) == 0 and len(atomic_events) == 0:
+    if len(begin_to_elems) == 0:
+        if len(atomic_events) > 0:
+            yield from _handle_case_of_only_atomic_events(atomic_events)
         return
     begin_times = iter(sorted(begin_to_elems))
     begin_times_of_atomic_events = sorted(atomic_events)
@@ -143,6 +145,14 @@ def interweave(  # noqa: C901
         combination = combination.difference(end_to_elems[next_end_time])
         if len(combination) == 0:
             return
+
+
+def _handle_case_of_only_atomic_events[
+    Event: t.Hashable,
+    IntervalBound: _IntervalBound,
+](atomic_events: dict[IntervalBound, set[Event]]) -> t.Iterable[frozenset[Event]]:
+    for _, events in sorted(atomic_events.items()):
+        yield frozenset(events)
 
 
 def _handle_atomic_events[Event: t.Hashable, IntervalBound: _IntervalBound](
