@@ -12,7 +12,7 @@ def non_overlapping_intervals[T](
     draw: st.DrawFn, values: st.SearchStrategy[T]
 ) -> list[tuple[int, int, T]]:
     deltas = draw(
-        st.lists(st.tuples(st.integers(min_value=1), st.integers(min_value=1)))
+        st.lists(st.tuples(st.integers(min_value=1), st.integers(min_value=0)))
     )
     intervals = []
     cur_end = 0
@@ -137,6 +137,7 @@ def test_interweave_yields_all_events_eventually[T](
             [(1, 1, 0.0), (2, 3, 0.0)],
             [{(1, 1, 0.0)}, {(2, 3, 0.0)}],
         ),
+        ([(1, 2, 0), (3, 3, 0)], [{(1, 2, 0)}, {(3, 3, 0)}]),
         (
             [(0, 3, 3.14), (1, 1, 0.0), (2, 2, 0.0)],
             [
