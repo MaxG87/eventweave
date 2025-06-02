@@ -1,10 +1,15 @@
+import math
 from itertools import permutations
 
 import pytest
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from eventweave import interweave
+
+_E = math.exp(1)
+_PI = math.pi
+_PHI = (math.sqrt(5) + 1) / 2
 
 
 @st.composite
@@ -12,7 +17,7 @@ def non_overlapping_intervals[T](
     draw: st.DrawFn, values: st.SearchStrategy[T]
 ) -> list[tuple[int, int, T]]:
     deltas = draw(
-        st.lists(st.tuples(st.integers(min_value=1), st.integers(min_value=1)))
+        st.lists(st.tuples(st.integers(min_value=1), st.integers(min_value=0)))
     )
     intervals = []
     cur_end = 0
@@ -35,6 +40,7 @@ def test_no_event_iters() -> None:
 @given(
     stream=non_overlapping_intervals(st.integers()),
 )
+@example(stream=[(1, 2, 1), (3, 4, 2), (5, 6, 3)])
 def test_interweave_reproduces_chronologically_ordered_stream[T](
     stream: list[T],
 ) -> None:
@@ -128,6 +134,57 @@ def test_interweave_yields_all_events_eventually[T](
                 {(1, 6, "Long Running Event")},  # for T in ]5, 6]
             ],
         ),
+        (
+            [(1, 1, 0.0), (2, 2, 0.0)],
+            [{(1, 1, 0.0)}, {(2, 2, 0.0)}],
+        ),
+        (
+            [(1, 1, 0.0), (2, 3, 0.0)],
+            [{(1, 1, 0.0)}, {(2, 3, 0.0)}],
+        ),
+        ([(1, 2, 0), (3, 3, 0)], [{(1, 2, 0)}, {(3, 3, 0)}]),
+        (
+            [(0, 3, _PI), (1, 1, _PI), (2, 2, _PI)],
+            [
+                {(0, 3, _PI)},
+                {(0, 3, _PI), (1, 1, _PI)},
+                {(0, 3, _PI)},
+                {(0, 3, _PI), (2, 2, _PI)},
+                {(0, 3, _PI)},
+            ],
+        ),
+        ([(1, 2, 0), (3, 3, 0), (4, 5, 0)], [{(1, 2, 0)}, {(3, 3, 0)}, {(4, 5, 0)}]),
+        (
+            [(1, 3, _E), (3, 3, _E), (3, 5, _E)],
+            [{(1, 3, _E)}, {(1, 3, _E), (3, 3, _E)}, {(3, 5, _E)}],
+        ),
+        (
+            [
+                (1, 3, _PHI),
+                (3, 3, _PHI),
+                (3, 3, _E),
+                (3, 3, 1337),
+                (3, 5, _PHI),
+                (5, 5, _PHI),
+                (5, 5, 1337),
+            ],
+            [
+                {(1, 3, _PHI)},
+                {(1, 3, _PHI), (3, 3, _PHI), (3, 3, _E), (3, 3, 1337)},
+                {(3, 5, _PHI)},
+                {(3, 5, _PHI), (5, 5, _PHI), (5, 5, 1337)},
+            ],
+        ),
+        (
+            [(1, 1, _PI), (1, 3, _PHI), (3, 3, 1337), (3, 5, _PHI), (5, 5, 1337)],
+            [
+                {(1, 1, _PI), (1, 3, _PHI)},
+                {(1, 3, _PHI)},
+                {(1, 3, _PHI), (3, 3, 1337)},
+                {(3, 5, _PHI)},
+                {(3, 5, _PHI), (5, 5, 1337)},
+            ],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
@@ -140,13 +197,13 @@ def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
 
 @given(
     valid_stream=st.lists(
-        st.tuples(st.integers(), st.integers(), st.floats())
-        .filter(lambda x: x[0] < x[1])
-        .map(lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])),
+        st.tuples(st.integers(), st.integers(), st.floats()).map(
+            lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])
+        ),
     ),
-    invalid_element=st.tuples(st.integers(), st.integers(), st.floats()).map(
-        lambda x: (max(x[0], x[1]), min(x[0], x[1]), x[2])
-    ),
+    invalid_element=st.tuples(st.integers(), st.integers(), st.floats())
+    .filter(lambda x: x[0] != x[1])
+    .map(lambda x: (max(x[0], x[1]), min(x[0], x[1]), x[2])),
 )
 def test_interweave_raises_value_error[T](
     valid_stream: list[T], invalid_element: T
