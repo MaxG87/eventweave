@@ -42,14 +42,8 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             self.begin_times_of_atomics_idx += 1
 
     def yield_remaining_events(self) -> t.Iterable[frozenset[Event]]:
-        yield from _handle_case_of_only_atomic_events(
-            {
-                bound: self.bound_to_events[bound]
-                for bound in self.begin_times_of_atomics[
-                    self.begin_times_of_atomics_idx :
-                ]
-            }
-        )
+        for bound in self.begin_times_of_atomics[self.begin_times_of_atomics_idx :]:
+            yield frozenset(self.bound_to_events[bound])
 
     def interweave_atomic_events(
         self,
@@ -145,10 +139,11 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: C901
     >>> assert result == expected
     """
     begin_to_elems, end_to_elems, atomic_events = _consume_event_stream(events, key)
+    atomic_events_interweaver = _AtomicEventInterweaver(bound_to_events=atomic_events)
 
     if not _has_elements(begin_to_elems):
         if _has_elements(atomic_events):
-            yield from _handle_case_of_only_atomic_events(atomic_events)
+            yield from atomic_events_interweaver.yield_remaining_events()
         return
     begin_times = iter(sorted(begin_to_elems))
     end_times = sorted(end_to_elems)
@@ -156,7 +151,6 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: C901
 
     first_begin = next(begin_times)
 
-    atomic_events_interweaver = _AtomicEventInterweaver(bound_to_events=atomic_events)
     yield from atomic_events_interweaver.yield_leading_events(first_begin)
 
     combination = frozenset(begin_to_elems[first_begin])
@@ -215,11 +209,3 @@ def _consume_event_stream[Event, IntervalBound: _IntervalBound](
         else:
             raise ValueError("End time must be greater than or equal to begin time.")
     return begin_to_elems, end_to_elems, atomic_events
-
-
-def _handle_case_of_only_atomic_events[
-    Event: t.Hashable,
-    IntervalBound: _IntervalBound,
-](atomic_events: dict[IntervalBound, set[Event]]) -> t.Iterable[frozenset[Event]]:
-    for _, events in sorted(atomic_events.items()):
-        yield frozenset(events)
