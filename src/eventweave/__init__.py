@@ -146,10 +146,9 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: C901
             yield from atomic_events_interweaver.yield_remaining_events()
         return
     begin_times = iter(sorted(begin_to_elems))
+    first_begin = next(begin_times)
     end_times = sorted(end_to_elems)
     end_times_idx = 0
-
-    first_begin = next(begin_times)
 
     yield from atomic_events_interweaver.yield_leading_events(first_begin)
 
@@ -168,7 +167,8 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: C901
             if next_begin < end_time:
                 break
             combination = combination.difference(end_to_elems[end_time])
-            if _has_elements(combination) and end_time not in begin_to_elems:
+            event_ends_when_next_starts = end_time in begin_to_elems
+            if _has_elements(combination) and not event_ends_when_next_starts:
                 yield combination
             end_times_idx += 1
         combination = combination.union(begin_to_elems[next_begin])
