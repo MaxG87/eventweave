@@ -43,6 +43,11 @@ def interweave(  # noqa: C901
     non-simultaneous. This allows conveniently representing sequential but
     non-overlapping events as distinct.
 
+    An instantaneous event, where the begin and end times are equal, is considered
+    active at that point in time. If there is a normal event that starts when some
+    instantaneous event ends, the rule above applies, and the two events are
+    considered non-overlapping.
+
     The algorithm takes O(n) space and O(n log n) time, where n is the number of events.
     Therefore, it is not suitable for extremely large streams of events.
 

@@ -10,6 +10,7 @@ events that occur simultaneously.
 - Accepts any iterable of events with user-defined start and end times
 - Yields sets of events that are simultaneously active at some point in time
 - Handles edge cases for back-to-back, non-overlapping intervals
+- Supports atomic events that start and end at the same time
 - Runs in `O(n log n)` time and `O(n)` space
 
 ## Installation
@@ -56,12 +57,8 @@ If one event ends at time `T` and another begins at time `T`, they are **not
 considered overlapping**. The model assumes the starting event ends just after
 `T` to preserve strict separation of events that merely touch.
 
-This handling of edge cases can lead to surprising results in certain
-situations. For example, if a long-running event spans two shorter events - where
-the first ends exactly when the second starts - an additional combination may
-currently be produced that contains only the long-running event. This behavior
-may change in future versions.
-
-Currently, instantaneous events - where the start and end times are the same -
-are not supported. Support will be added once their semantics are clearly
-defined.
+**Instantaneous events** - where the start and end times are the same - are
+considered to be active exactly at this point in time. If an event `E` starts
+and ends at time `T`, it will overlap with any other event that ends at `T`.
+However, it will not overlap with any event that starts at `T`, due to the
+rule above.
