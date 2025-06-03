@@ -63,7 +63,112 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             self.begin_times_of_atomics_idx += 1
 
 
-def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: C901
+@dataclass
+class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
+    """Encapsulates the state for the interweave algorithm."""
+
+    begin_to_elems: dict[IntervalBound, set[Event]]
+    end_to_elems: dict[IntervalBound, set[Event]]
+    atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound]
+    begin_times: list[IntervalBound]
+    end_times: list[IntervalBound]
+    combination: frozenset[Event]
+    next_begin_idx: int = 0
+    end_times_idx: int = 0
+
+    @classmethod
+    def from_element_mappings(
+        cls,
+        begin_to_elems: dict[IntervalBound, set[Event]],
+        end_to_elems: dict[IntervalBound, set[Event]],
+        atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
+    ) -> t.Self:
+        if not _has_elements(begin_to_elems):
+            raise ValueError("There must be elements to interweave!")
+        begin_times = sorted(begin_to_elems)
+        first_begin = begin_times[0]
+        end_times = sorted(end_to_elems)
+
+        return cls(
+            atomic_events_interweaver=atomic_events_interweaver,
+            begin_times=begin_times,
+            begin_to_elems=begin_to_elems,
+            combination=frozenset(begin_to_elems[first_begin]),
+            end_times=end_times,
+            end_to_elems=end_to_elems,
+            next_begin_idx=0,
+        )
+
+    def yield_leading_events(self) -> t.Iterable[frozenset[Event]]:
+        """Yield leading events based on the first begin time."""
+        first_begin = self.begin_times[0]
+        return self.atomic_events_interweaver.yield_leading_events(first_begin)
+
+    def yield_trailing_events(self) -> t.Iterable[frozenset[Event]]:
+        """Yield trailing events based on the last end time."""
+        if not self.end_times:
+            return []
+        return self.atomic_events_interweaver.yield_remaining_events()
+
+    def interweave_atomic_events(self) -> t.Iterable[frozenset[Event]]:
+        """Interweave atomic events with the current combination."""
+        next_begin = self.begin_times[self.next_begin_idx]
+        yield from self.atomic_events_interweaver.interweave_atomic_events(
+            self.combination, next_begin
+        )
+        self.next_begin_idx += 1
+
+    def process_next_begin_time(
+        self,
+    ) -> t.Iterable[frozenset[Event]]:
+        """Process a single begin time in the interweaving algorithm."""
+        yield self.combination
+        next_begin = self.begin_times[self.next_begin_idx]
+
+        # Process end times until we reach the next begin time
+        while self.end_times_idx < len(self.end_times):
+            end_time = self.end_times[self.end_times_idx]
+
+            yield from self.atomic_events_interweaver.interweave_atomic_events(
+                self.combination, min(next_begin, end_time)
+            )
+
+            if next_begin < end_time:
+                break
+
+            # Remove ended events from combination
+            self.combination = self.combination.difference(self.end_to_elems[end_time])
+
+            # Yield combination if needed
+            event_ends_when_next_starts = end_time in self.begin_to_elems
+            if _has_elements(self.combination) and not event_ends_when_next_starts:
+                yield self.combination
+
+            self.end_times_idx += 1
+
+        # Add new events to combination
+        self.combination = self.combination.union(self.begin_to_elems[next_begin])
+        self.next_begin_idx += 1
+
+    def drop_off_events_chronologically(self) -> t.Iterable[frozenset[Event]]:
+        next_end_time = self.end_times[self.end_times_idx]
+        yield self.combination
+        yield from self.atomic_events_interweaver.interweave_atomic_events(
+            self.combination, next_end_time
+        )
+        self.combination = self.combination.difference(self.end_to_elems[next_end_time])
+        self.end_times_idx += 1
+
+    def has_next_begin(self) -> bool:
+        """Check if there is a next begin time."""
+        return self.next_begin_idx < len(self.begin_to_elems)
+
+    def has_next_end(self) -> bool:
+        """Check if there is a next begin time."""
+        return self.end_times_idx < len(self.end_to_elems)
+
+
+def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
     events: t.Iterable[Event],
     key: t.Callable[[Event], tuple[IntervalBound, IntervalBound]],
 ) -> t.Iterator[frozenset[Event]]:
@@ -141,46 +246,41 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](  # noqa: C901
     begin_to_elems, end_to_elems, atomic_events = _consume_event_stream(events, key)
     atomic_events_interweaver = _AtomicEventInterweaver(bound_to_events=atomic_events)
 
+    # Handle edge case: no interval events, only atomic events
     if not _has_elements(begin_to_elems):
-        if _has_elements(atomic_events):
-            yield from atomic_events_interweaver.yield_remaining_events()
+        yield from _handle_atomic_only_case(atomic_events_interweaver)
         return
-    begin_times = iter(sorted(begin_to_elems))
-    first_begin = next(begin_times)
-    end_times = sorted(end_to_elems)
-    end_times_idx = 0
 
-    yield from atomic_events_interweaver.yield_leading_events(first_begin)
-
-    combination = frozenset(begin_to_elems[first_begin])
-    yield from atomic_events_interweaver.interweave_atomic_events(
-        combination, first_begin
+    # Initialize state
+    state = _EventWeaver.from_element_mappings(
+        begin_to_elems, end_to_elems, atomic_events_interweaver
     )
 
-    for next_begin in begin_times:
-        yield combination
-        while True:
-            end_time = end_times[end_times_idx]
-            yield from atomic_events_interweaver.interweave_atomic_events(
-                combination, min(next_begin, end_time)
-            )
-            if next_begin < end_time:
-                break
-            combination = combination.difference(end_to_elems[end_time])
-            event_ends_when_next_starts = end_time in begin_to_elems
-            if _has_elements(combination) and not event_ends_when_next_starts:
-                yield combination
-            end_times_idx += 1
-        combination = combination.union(begin_to_elems[next_begin])
+    # Yield atomic events strictly before the first begin time of interval events
+    yield from state.yield_leading_events()
 
-    for next_end_time in end_times[end_times_idx:]:
-        yield combination
-        yield from atomic_events_interweaver.interweave_atomic_events(
-            combination, next_end_time
-        )
-        combination = combination.difference(end_to_elems[next_end_time])
+    # Yield initial interval events with all atomic events startin at the first begin
+    # time
+    yield from state.interweave_atomic_events()
 
-    yield from atomic_events_interweaver.yield_remaining_events()
+    # Process each subsequent begin time
+    while state.has_next_begin():
+        yield from state.process_next_begin_time()
+
+    # Drop off elements in chronological order until the end times are exhausted
+    while state.has_next_end():
+        yield from state.drop_off_events_chronologically()
+
+    # Yield any remaining atomic events
+    yield from state.yield_trailing_events()
+
+
+def _handle_atomic_only_case[Event: t.Hashable, IntervalBound: _IntervalBound](
+    atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
+) -> t.Iterator[frozenset[Event]]:
+    """Handle the case where there are only atomic events."""
+    if _has_elements(atomic_events_interweaver.bound_to_events):
+        yield from atomic_events_interweaver.yield_remaining_events()
 
 
 def _has_elements(collection: t.Sized) -> bool:
