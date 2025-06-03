@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0](https://github.com/MaxG87/eventweave/compare/v0.3.0...v0.4.0) (2025-06-03)
+
+
+### Features
+
+* Add correct handling of first scenario with atomic events ([144a02e](https://github.com/MaxG87/eventweave/commit/144a02e9197b709cd2d91e305881f600f36dbf46))
+* Correctly handle atomic events ([3dd0dae](https://github.com/MaxG87/eventweave/commit/3dd0dae8db52473edd0c18d21f54ca1a160687ef))
+* Handle atomic event in middle of the stream ([4421ce8](https://github.com/MaxG87/eventweave/commit/4421ce89265deb3f639a2d3b993213ca8a60cd6b))
+* Handle atomic event with back-to-back scenario ([2f6a4ea](https://github.com/MaxG87/eventweave/commit/2f6a4eae0393c2712eac2c075831e5e49d1069c8))
+* Handle atomic events at the end of the stream ([1abb7a7](https://github.com/MaxG87/eventweave/commit/1abb7a77dd42fa3a2f4ca855872ce26c0b3a3b34))
+* Handle atomic events at the start of the stream ([2a7f208](https://github.com/MaxG87/eventweave/commit/2a7f20854cf5f6d97ebf0d67a7cacc0850bb89ff))
+* Handle atomic events back-to-back with the first normal event ([80b2d7f](https://github.com/MaxG87/eventweave/commit/80b2d7f45400f1d3b0aae03eafcd2041cb862823))
+* Handle atomic events back-to-back with the last normal event ([aa657c3](https://github.com/MaxG87/eventweave/commit/aa657c3e2b4e6eebe37a856f2d68f8c697aed6ef))
+* Handle special case of only atomic events ([54739dc](https://github.com/MaxG87/eventweave/commit/54739dc68b804215a8c9835fe03e6e611f6ec639))
+
+
+### Bug Fixes
+
+* Correctly handle back-to-back events ([6e989ce](https://github.com/MaxG87/eventweave/commit/6e989ce2cf9fd82b4c800e727d67844d252f71b4))
+* Handle back-to-back events correctly ([87b8b19](https://github.com/MaxG87/eventweave/commit/87b8b19f6ed99abec824b2daf0330c24c13a6f61))
+
+
+### Dependencies
+
+* Relock dependencies ([bfea356](https://github.com/MaxG87/eventweave/commit/bfea356ff6fd83b3d5a0acefdad2239e22df3f8a))
+
+
+### Documentation
+
+* Update documentation regarding atomic events ([a0d5540](https://github.com/MaxG87/eventweave/commit/a0d5540af0fdf0c421c830dac6a062195b1ac89b))
+
 ## [0.3.0](https://github.com/MaxG87/eventweave/compare/v0.2.0...v0.3.0) (2025-05-29)
 
 
