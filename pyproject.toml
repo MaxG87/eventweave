@@ -7,6 +7,13 @@ requires-python = ">=3.10"
 dependencies = []
 readme = "README.md"
 
+[project.urls]
+Homepage = "https://github.com/MaxG87/eventweave"
+Repository = "https://github.com/MaxG87/eventweave"
+Issues = "https://github.com/MaxG87/eventweave"
+Changelog = "https://github.com/MaxG87/eventweave/blob/main/CHANGELOG.md"
+
+
 [dependency-groups]
 dev = [
     "hypothesis>=6.131.15",
