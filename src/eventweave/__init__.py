@@ -81,6 +81,10 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     def __post_init__(self) -> None:
         self.begin_times_of_atomics = sorted(self.bound_to_events)
 
+    def has_events(self) -> bool:
+        """Check if there are any atomic events."""
+        return len(self.bound_to_events) > 0
+
     def yield_leading_events(
         self, until: IntervalBound
     ) -> t.Iterable[frozenset[Event]]:
@@ -129,30 +133,39 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     next_begin_idx: int = 0
     end_times_idx: int = 0
 
+    def __post_init__(self) -> None:
+        if (
+            not self.has_atomic_events()
+            and not _has_elements(self.begin_to_elems)
+            and not _has_elements(self.end_to_elems)
+        ):
+            raise ValueError("There must be elements to interweave!")
+
     @classmethod
     def from_element_mappings(
         cls,
-        begin_to_elems: dict[IntervalBound, set[Event]],
-        end_to_elems: dict[IntervalBound, set[Event]],
+        consumed_stream: _ConsumedEventStream[Event, IntervalBound],
         atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
     ) -> t.Self:
-        if not _has_elements(begin_to_elems):
-            raise ValueError("There must be elements to interweave!")
-        begin_times = sorted(begin_to_elems)
+        begin_times = sorted(consumed_stream.begin_to_elems)
         first_begin = begin_times[0]
-        end_times = sorted(end_to_elems)
+        end_times = sorted(consumed_stream.end_to_elems)
 
         return cls(
             atomic_events_interweaver=atomic_events_interweaver,
             begin_times=begin_times,
-            begin_to_elems=begin_to_elems,
-            combination=frozenset(begin_to_elems[first_begin]),
+            begin_to_elems=consumed_stream.begin_to_elems,
+            combination=frozenset(consumed_stream.begin_to_elems[first_begin]),
             end_times=end_times,
-            end_to_elems=end_to_elems,
+            end_to_elems=consumed_stream.end_to_elems,
             next_begin_idx=0,
         )
 
-    def yield_leading_events(self) -> t.Iterable[frozenset[Event]]:
+    def has_atomic_events(self) -> bool:
+        """Check if there are any atomic events."""
+        return self.atomic_events_interweaver.has_events()
+
+    def yield_leading_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield leading events based on the first begin time."""
         first_begin = self.begin_times[0]
         return self.atomic_events_interweaver.yield_leading_events(first_begin)
@@ -308,13 +321,11 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
 
     # Initialize state
     state = _EventWeaver.from_element_mappings(
-        consumed_stream.begin_to_elems,
-        consumed_stream.end_to_elems,
-        atomic_events_interweaver,
+        consumed_stream, atomic_events_interweaver
     )
 
     # Yield atomic events strictly before the first begin time of interval events
-    yield from state.yield_leading_events()
+    yield from state.yield_leading_atomic_events()
 
     # Yield initial interval events with all atomic events startin at the first begin
     # time
