@@ -51,6 +51,7 @@ class _ConsumedEventStream[Event: t.Hashable, IntervalBound: _IntervalBound]:
                 case (None, None):
                     elements_without_begin.add(elem)
                 case (None, end):
+                    elements_without_begin.add(elem)
                     end_to_elems[end].add(elem)  # type: ignore[index]
                 case (begin, None):
                     begin_to_elems[begin].add(elem)  # type: ignore[index]
@@ -88,7 +89,7 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         return len(self.bound_to_events) > 0
 
     def yield_leading_events(
-        self, until: IntervalBound
+        self, combination: frozenset[Event], until: IntervalBound
     ) -> t.Iterable[frozenset[Event]]:
         while True:
             try:
@@ -97,7 +98,7 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
                 break
             if start_end >= until:
                 break
-            yield frozenset(self.bound_to_events[start_end])
+            yield combination.union(self.bound_to_events[start_end])
             self.begin_times_of_atomics_idx += 1
 
     def yield_remaining_events(self) -> t.Iterable[frozenset[Event]]:
@@ -140,6 +141,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             not self.has_atomic_events()
             and not _has_elements(self.begin_to_elems)
             and not _has_elements(self.end_to_elems)
+            and not _has_elements(self.combination)
         ):
             raise ValueError("There must be elements to interweave!")
 
@@ -150,14 +152,13 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
     ) -> t.Self:
         begin_times = sorted(consumed_stream.begin_to_elems)
-        first_begin = begin_times[0]
         end_times = sorted(consumed_stream.end_to_elems)
 
         return cls(
             atomic_events_interweaver=atomic_events_interweaver,
             begin_times=begin_times,
             begin_to_elems=consumed_stream.begin_to_elems,
-            combination=frozenset(consumed_stream.begin_to_elems[first_begin]),
+            combination=frozenset(consumed_stream.elements_without_begin),
             end_times=end_times,
             end_to_elems=consumed_stream.end_to_elems,
             next_begin_idx=0,
@@ -168,9 +169,17 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         return self.atomic_events_interweaver.has_events()
 
     def yield_leading_atomic_events(self) -> t.Iterable[frozenset[Event]]:
-        """Yield leading events based on the first begin time."""
+        """Yield atomic events that start before the first begin time."""
         first_begin = self.begin_times[0]
-        return self.atomic_events_interweaver.yield_leading_events(first_begin)
+        return self.atomic_events_interweaver.yield_leading_events(
+            self.combination, first_begin
+        )
+
+    def activate_very_first_interval_events(self) -> None:
+        if not self.begin_times:
+            return
+        first_begin = self.begin_times[0]
+        self.combination = self.combination.union(self.begin_to_elems[first_begin])
 
     def yield_trailing_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield trailing events based on the last end time."""
@@ -185,6 +194,53 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             self.combination, next_begin
         )
         self.next_begin_idx += 1
+
+    def interweave_events_without_begin(self) -> t.Iterable[frozenset[Event]]:
+        """Interweave atomic events before any begin time."""
+        maybe_next_begin = self.first_begin_time()
+        if not _has_elements(self.combination):
+            return
+        yield self.combination
+        # Process end times until we reach the next begin time
+        while self.end_times_idx < len(self.end_times):
+            end_time = self.end_times[self.end_times_idx]
+
+            if maybe_next_begin is not None:
+                yield from self.atomic_events_interweaver.interweave_atomic_events(
+                    self.combination, min(maybe_next_begin, end_time)
+                )
+
+            if maybe_next_begin is not None and maybe_next_begin < end_time:
+                break
+
+            # Remove ended events from combination
+            self.combination = self.combination.difference(self.end_to_elems[end_time])
+
+            # Yield combination if needed
+            event_ends_when_next_starts = end_time in self.begin_to_elems
+            if _has_elements(self.combination) and not event_ends_when_next_starts:
+                yield self.combination
+
+            self.end_times_idx += 1
+
+    def first_begin_time(self) -> IntervalBound | None:
+        maybe_first_begin_interval = self.begin_times[0] if self.begin_times else None
+        maybe_first_begin_atomic = (
+            self.atomic_events_interweaver.begin_times_of_atomics[0]
+            if self.atomic_events_interweaver.begin_times_of_atomics
+            else None
+        )
+        match (maybe_first_begin_interval, maybe_first_begin_atomic):
+            case (None, None):
+                return None
+            case (None, atomic_begin):
+                return atomic_begin
+            case (interval_begin, None):
+                return interval_begin
+            case (interval_begin, atomic_begin):
+                return min(interval_begin, atomic_begin)  # type: ignore[type-var]
+            case _:
+                t.assert_never(self)  # type: ignore[arg-type]
 
     def process_next_begin_time(
         self,
@@ -330,11 +386,14 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
         consumed_stream, atomic_events_interweaver
     )
 
+    yield from state.interweave_events_without_begin()
+
     # Yield atomic events strictly before the first begin time of interval events
     yield from state.yield_leading_atomic_events()
 
-    # Yield initial interval events with all atomic events startin at the first begin
-    # time
+    # Yield initial interval events with all atomic events starting at the first begin
+    # time.
+    state.activate_very_first_interval_events()
     yield from state.interweave_atomic_events()
 
     # Process each subsequent begin time
