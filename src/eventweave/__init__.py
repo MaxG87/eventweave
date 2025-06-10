@@ -101,9 +101,11 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             yield combination.union(self.bound_to_events[start_end])
             self.begin_times_of_atomics_idx += 1
 
-    def yield_remaining_events(self) -> t.Iterable[frozenset[Event]]:
+    def interweave_remaining_events(
+        self, active_combination: frozenset[Event]
+    ) -> t.Iterable[frozenset[Event]]:
         for bound in self.begin_times_of_atomics[self.begin_times_of_atomics_idx :]:
-            yield frozenset(self.bound_to_events[bound])
+            yield active_combination.union(frozenset(self.bound_to_events[bound]))
 
     def interweave_atomic_events(
         self,
@@ -183,11 +185,17 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         first_begin = self.begin_times[0]
         self.combination = self.combination.union(self.begin_to_elems[first_begin])
 
-    def yield_trailing_events(self) -> t.Iterable[frozenset[Event]]:
+    def interweave_trailing_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield trailing events based on the last end time."""
         if not self.end_times:
-            return []
-        return self.atomic_events_interweaver.yield_remaining_events()
+            return
+        if _has_elements(self.combination):
+            yield self.combination
+        yield from self.atomic_events_interweaver.interweave_remaining_events(
+            self.combination
+        )
+        if _has_elements(self.combination):
+            yield self.combination
 
     def interweave_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Interweave atomic events with the current combination."""
@@ -409,7 +417,7 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
         yield from state.drop_off_events_chronologically()
 
     # Yield any remaining atomic events
-    yield from state.yield_trailing_events()
+    yield from state.interweave_trailing_atomic_events()
 
 
 def _handle_atomic_only_case[Event: t.Hashable, IntervalBound: _IntervalBound](
@@ -417,7 +425,7 @@ def _handle_atomic_only_case[Event: t.Hashable, IntervalBound: _IntervalBound](
 ) -> t.Iterator[frozenset[Event]]:
     """Handle the case where there are only atomic events."""
     if _has_elements(atomic_events_interweaver.bound_to_events):
-        yield from atomic_events_interweaver.yield_remaining_events()
+        yield from atomic_events_interweaver.interweave_remaining_events(frozenset())
 
 
 def _has_elements(collection: t.Sized) -> bool:
