@@ -170,13 +170,15 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def yield_leading_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield atomic events that start before the first begin time."""
+        if not _has_elements(self.begin_times):
+            return []
         first_begin = self.begin_times[0]
         return self.atomic_events_interweaver.yield_leading_events(
             self.combination, first_begin
         )
 
     def activate_very_first_interval_events(self) -> None:
-        if not self.begin_times:
+        if not _has_elements(self.begin_times):
             return
         first_begin = self.begin_times[0]
         self.combination = self.combination.union(self.begin_to_elems[first_begin])
@@ -189,6 +191,8 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def interweave_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Interweave atomic events with the current combination."""
+        if not _has_elements(self.begin_times):
+            return
         next_begin = self.begin_times[self.next_begin_idx]
         yield from self.atomic_events_interweaver.interweave_atomic_events(
             self.combination, next_begin
