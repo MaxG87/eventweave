@@ -88,6 +88,10 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         """Check if there are any atomic events."""
         return len(self.bound_to_events) > 0
 
+    def has_remaining_events(self) -> bool:
+        """Check if there are any atomic events left to yield."""
+        return self.begin_times_of_atomics_idx < len(self.begin_times_of_atomics)
+
     def yield_leading_events(
         self, combination: frozenset[Event], until: IntervalBound
     ) -> t.Iterable[frozenset[Event]]:
@@ -100,12 +104,6 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
                 break
             yield combination.union(self.bound_to_events[start_end])
             self.begin_times_of_atomics_idx += 1
-
-    def interweave_remaining_events(
-        self, active_combination: frozenset[Event]
-    ) -> t.Iterable[frozenset[Event]]:
-        for bound in self.begin_times_of_atomics[self.begin_times_of_atomics_idx :]:
-            yield active_combination.union(frozenset(self.bound_to_events[bound]))
 
     def interweave_atomic_events(
         self,
@@ -123,6 +121,12 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             if _has_elements(active_combination) and start_end != until:
                 yield active_combination
             self.begin_times_of_atomics_idx += 1
+
+    def interweave_remaining_events(
+        self, active_combination: frozenset[Event]
+    ) -> t.Iterable[frozenset[Event]]:
+        for bound in self.begin_times_of_atomics[self.begin_times_of_atomics_idx :]:
+            yield active_combination.union(frozenset(self.bound_to_events[bound]))
 
 
 @dataclass
@@ -191,11 +195,12 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             return
         if _has_elements(self.combination):
             yield self.combination
-        yield from self.atomic_events_interweaver.interweave_remaining_events(
-            self.combination
-        )
-        if _has_elements(self.combination):
-            yield self.combination
+        if self.atomic_events_interweaver.has_remaining_events():
+            yield from self.atomic_events_interweaver.interweave_remaining_events(
+                self.combination
+            )
+            if _has_elements(self.combination):
+                yield self.combination
 
     def interweave_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Interweave atomic events with the current combination."""
@@ -293,7 +298,6 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def drop_off_events_chronologically(self) -> t.Iterable[frozenset[Event]]:
         next_end_time = self.end_times[self.end_times_idx]
-        yield self.combination
         yield from self.atomic_events_interweaver.interweave_atomic_events(
             self.combination, next_end_time
         )
@@ -414,6 +418,7 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
 
     # Drop off elements in chronological order until the end times are exhausted
     while state.has_next_end():
+        yield state.combination
         yield from state.drop_off_events_chronologically()
 
     # Yield any remaining atomic events

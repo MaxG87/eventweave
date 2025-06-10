@@ -235,6 +235,36 @@ def test_interweave_yields_all_events_eventually[T](
                 {(1, None, "1 - None"), (2, None, "2 - None")},
             ],
         ),
+        (
+            [
+                (None, None, "None - None"),
+                (None, None, "None - None II"),
+                (None, 1, "None - 1"),
+                (None, 2, "None - 2"),
+                (1, None, "1 - None"),
+                (2, None, "2 - None"),
+            ],
+            [
+                {  # for T in [None, 1]
+                    (None, None, "None - None"),
+                    (None, None, "None - None II"),
+                    (None, 1, "None - 1"),
+                    (None, 2, "None - 2"),
+                },
+                {  # for T in ]1, 2]
+                    (None, None, "None - None"),
+                    (None, None, "None - None II"),
+                    (None, 2, "None - 2"),
+                    (1, None, "1 - None"),
+                },
+                {  # for T in ]2, None]
+                    (None, None, "None - None"),
+                    (None, None, "None - None II"),
+                    (1, None, "1 - None"),
+                    (2, None, "2 - None"),
+                },
+            ],
+        ),
     ],
 )
 def test_interweave_works[T](elements: list[T], expected: list[set[T]]) -> None:
