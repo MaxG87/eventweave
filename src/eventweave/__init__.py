@@ -19,6 +19,59 @@ class _IntervalBound(t.Protocol):
         pass
 
 
+@dataclass(frozen=True)
+class _ConsumedEventStream[Event: t.Hashable, IntervalBound: _IntervalBound]:
+    """A dataclass to hold the consumed event stream data."""
+
+    elements_without_begin: set[Event]
+    begin_to_elems: dict[IntervalBound, set[Event]]
+    end_to_elems: dict[IntervalBound, set[Event]]
+    atomic_events: dict[IntervalBound, set[Event]]
+
+    @classmethod
+    def from_stream(  # noqa: C901
+        cls,
+        stream: t.Iterable[Event],
+        key: t.Callable[[Event], tuple[IntervalBound | None, IntervalBound | None]],
+    ) -> t.Self:
+        elements_without_begin = set()
+        begin_to_elems: dict[IntervalBound, set[Event]] = defaultdict(set)
+        end_to_elems: dict[IntervalBound, set[Event]] = defaultdict(set)
+        atomic_events: dict[IntervalBound, set[Event]] = defaultdict(set)
+
+        # Note: mypy does not support type narrowing in tuples. Therefore it falsely reports
+        # that maybe_begin and maybe_end can be None even though all cases of being None are
+        # handled explicitly. In a future version of mypy it may be possible to remove the
+        # `# type: ignore` comments.
+        for elem in stream:
+            maybe_begin, maybe_end = key(elem)
+            match (maybe_begin, maybe_end):
+                case (None, None):
+                    elements_without_begin.add(elem)
+                case (None, end):
+                    end_to_elems[end].add(elem)  # type: ignore[index]
+                case (begin, None):
+                    begin_to_elems[begin].add(elem)  # type: ignore[index]
+                case (begin, end) if begin < end:  # type: ignore[operator]
+                    begin_to_elems[begin].add(elem)  # type: ignore[index]
+                    end_to_elems[end].add(elem)  # type: ignore[index]
+                case (begin, end) if begin == end:
+                    atomic_events[begin].add(elem)  # type: ignore[index]
+                case _:
+                    raise ValueError(
+                        "End time must be greater than or equal to begin time."
+                    )
+        return cls(elements_without_begin, begin_to_elems, end_to_elems, atomic_events)
+
+    def has_interval_events(self) -> bool:
+        """Check if there are any non-atomic events."""
+        return (
+            _has_elements(self.begin_to_elems)
+            or _has_elements(self.end_to_elems)
+            or _has_elements(self.elements_without_begin)
+        )
+
+
 @dataclass
 class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     begin_times_of_atomics: list[IntervalBound] = field(init=False)
@@ -243,17 +296,21 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
     ... ]
     >>> assert result == expected
     """
-    begin_to_elems, end_to_elems, atomic_events = _consume_event_stream(events, key)
-    atomic_events_interweaver = _AtomicEventInterweaver(bound_to_events=atomic_events)
+    consumed_stream = _ConsumedEventStream.from_stream(events, key)
+    atomic_events_interweaver = _AtomicEventInterweaver(
+        bound_to_events=consumed_stream.atomic_events
+    )
 
     # Handle edge case: no interval events, only atomic events
-    if not _has_elements(begin_to_elems):
+    if not consumed_stream.has_interval_events():
         yield from _handle_atomic_only_case(atomic_events_interweaver)
         return
 
     # Initialize state
     state = _EventWeaver.from_element_mappings(
-        begin_to_elems, end_to_elems, atomic_events_interweaver
+        consumed_stream.begin_to_elems,
+        consumed_stream.end_to_elems,
+        atomic_events_interweaver,
     )
 
     # Yield atomic events strictly before the first begin time of interval events
@@ -285,27 +342,3 @@ def _handle_atomic_only_case[Event: t.Hashable, IntervalBound: _IntervalBound](
 
 def _has_elements(collection: t.Sized) -> bool:
     return len(collection) > 0
-
-
-def _consume_event_stream[Event, IntervalBound: _IntervalBound](
-    stream: t.Iterable[Event],
-    key: t.Callable[[Event], tuple[IntervalBound, IntervalBound]],
-) -> tuple[
-    dict[IntervalBound, set[Event]],
-    dict[IntervalBound, set[Event]],
-    dict[IntervalBound, set[Event]],
-]:
-    begin_to_elems = defaultdict(set)
-    end_to_elems = defaultdict(set)
-    atomic_events = defaultdict(set)
-
-    for elem in stream:
-        begin, end = key(elem)
-        if begin < end:
-            begin_to_elems[begin].add(elem)
-            end_to_elems[end].add(elem)
-        elif begin == end:
-            atomic_events[begin].add(elem)
-        else:
-            raise ValueError("End time must be greater than or equal to begin time.")
-    return begin_to_elems, end_to_elems, atomic_events
