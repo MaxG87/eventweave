@@ -2,6 +2,10 @@ import typing as t
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+type KeyFuncT[Event, IntervalBound] = t.Callable[
+    [Event], tuple[IntervalBound | None, IntervalBound | None]
+]
+
 
 class _IntervalBound(t.Protocol):
     """Protocol for annotating comparable types."""
@@ -30,9 +34,7 @@ class _ConsumedEventStream[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     @classmethod
     def from_stream(  # noqa: C901
-        cls,
-        stream: t.Iterable[Event],
-        key: t.Callable[[Event], tuple[IntervalBound | None, IntervalBound | None]],
+        cls, stream: t.Iterable[Event], key: KeyFuncT[Event, IntervalBound]
     ) -> t.Self:
         elements_without_begin = set()
         begin_to_elems: dict[IntervalBound, set[Event]] = defaultdict(set)
@@ -235,8 +237,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
 
 def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
-    events: t.Iterable[Event],
-    key: t.Callable[[Event], tuple[IntervalBound, IntervalBound]],
+    events: t.Iterable[Event], key: KeyFuncT[Event, IntervalBound]
 ) -> t.Iterator[frozenset[Event]]:
     """
     Interweave an iterable of events into a chronological iterator of active combinations
