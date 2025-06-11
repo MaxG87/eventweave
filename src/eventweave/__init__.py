@@ -311,6 +311,11 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
     instantaneous event ends, the rule above applies, and the two events are
     considered non-overlapping.
 
+    If the begin time of an event is `None`, it is considered to be active before any
+    other event. If the end time is `None`, the event is considered to be active until
+    the end of time. If both begin and end times are `None`, the event is considered to
+    be active at all times.
+
     The algorithm takes O(n) space and O(n log n) time, where n is the number of events.
     Therefore, it is not suitable for extremely large streams of events.
 
@@ -342,21 +347,25 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
     ...         end: str
     >>>
     >>> events = [
+    ...     Event(None, None),
     ...     Event("2022-01-01", "2025-01-01"),
     ...     Event("2023-01-01", "2023-01-03"),
     ...     Event("2023-01-02", "2023-01-04"),
     ... ]
     >>> result = list(interweave(events, lambda e: (e.begin, e.end)))
     >>> expected = [
-    ...     {Event("2022-01-01", "2025-01-01")},
-    ...     {Event("2022-01-01", "2025-01-01"), Event("2023-01-01", "2023-01-03")},
+    ...     {Event(None, None)},
+    ...     {Event(None, None), Event("2022-01-01", "2025-01-01")},
+    ...     {Event(None, None), Event("2022-01-01", "2025-01-01"), Event("2023-01-01", "2023-01-03")},
     ...     {
+    ...         Event(None, None),
     ...         Event("2022-01-01", "2025-01-01"),
     ...         Event("2023-01-01", "2023-01-03"),
     ...         Event("2023-01-02", "2023-01-04"),
     ...     },
-    ...     {Event("2022-01-01", "2025-01-01"), Event("2023-01-02", "2023-01-04")},
-    ...     {Event("2022-01-01", "2025-01-01")},
+    ...     {Event(None, None), Event("2022-01-01", "2025-01-01"), Event("2023-01-02", "2023-01-04")},
+    ...     {Event(None, None), Event("2022-01-01", "2025-01-01")},
+    ...     {Event(None, None)},
     ... ]
     >>> assert result == expected
     """
