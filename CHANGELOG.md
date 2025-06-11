@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.0](https://github.com/MaxG87/eventweave/compare/v0.4.0...v0.5.0) (2025-06-11)
+
+
+### Features
+
+* Add initial support for elements without begin time ([c87e278](https://github.com/MaxG87/eventweave/commit/c87e2783cad34d779505a1b577677736136a9758))
+* Add support for events without begin or end times ([253e435](https://github.com/MaxG87/eventweave/commit/253e4350c318d36913077b164d63b9a3aac1693d))
+* Add support for events without end time ([e59baae](https://github.com/MaxG87/eventweave/commit/e59baae2b6216590bf84f109d251a19cd5c25cee))
+
+
+### Bug Fixes
+
+* Add another test case and implement it ([68945f8](https://github.com/MaxG87/eventweave/commit/68945f8febdbbde63e49907647b841dbdeebd82b))
+* Add support for single event without begin time ([6ccc3b0](https://github.com/MaxG87/eventweave/commit/6ccc3b0de3011c529106c6e90bcf998e70259a70))
+
+
+### Documentation
+
+* Add comment regarding back-to-back check ([ed55537](https://github.com/MaxG87/eventweave/commit/ed555371fb40edd16b2435f71fd732b4ba396ee6))
+* Add project URLs ([ac90c2f](https://github.com/MaxG87/eventweave/commit/ac90c2f75072ed12812d9b2c1287304db89b680a))
+* Explain semantics of missing begin and end times ([7a8a833](https://github.com/MaxG87/eventweave/commit/7a8a8330b77d6e2d26e71d51906086156eb7753a))
+
 ## [0.4.0](https://github.com/MaxG87/eventweave/compare/v0.3.0...v0.4.0) (2025-06-03)
 
 
