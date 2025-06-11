@@ -220,6 +220,7 @@ def test_interweave_yields_all_events_eventually[T](
                 {(3, 5, "3 - 5")},
             ],
         ),
+        ([(None, None, "only None")], [{(None, None, "only None")}]),
         (
             [
                 (1, None, "1 - None"),
