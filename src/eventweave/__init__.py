@@ -207,26 +207,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             return
         yield self.combination
         # Process end times until we reach the next begin time
-        while self.end_times_idx < len(self.end_times):
-            end_time = self.end_times[self.end_times_idx]
-
-            if maybe_next_begin is not None:
-                yield from self.atomic_events_interweaver.interweave_atomic_events(
-                    self.combination, min(maybe_next_begin, end_time)
-                )
-
-            if maybe_next_begin is not None and maybe_next_begin < end_time:
-                break
-
-            # Remove ended events from combination
-            self.combination = self.combination.difference(self.end_to_elems[end_time])
-
-            # Yield combination if needed
-            event_ends_when_next_starts = end_time in self.begin_to_elems
-            if _has_elements(self.combination) and not event_ends_when_next_starts:
-                yield self.combination
-
-            self.end_times_idx += 1
+        yield from self.drop_off_events_chronologically_until(maybe_next_begin)
 
     def first_begin_time(self) -> IntervalBound | None:
         maybe_first_begin_interval = self.begin_times[0] if self.begin_times else None
@@ -270,14 +251,15 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         self.end_times_idx += 1
 
     def drop_off_events_chronologically_until(
-        self, until: IntervalBound
+        self, until: IntervalBound | None
     ) -> t.Iterable[frozenset[Event]]:
         while self.end_times_idx < len(self.end_times):
             end_time = self.end_times[self.end_times_idx]
-            yield from self.atomic_events_interweaver.interweave_atomic_events(
-                self.combination, min(until, end_time)
-            )
-            if until < end_time:
+            if until is not None:
+                yield from self.atomic_events_interweaver.interweave_atomic_events(
+                    self.combination, min(until, end_time)
+                )
+            if until is not None and until < end_time:
                 break
 
             # Remove ended events from combination
