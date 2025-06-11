@@ -253,7 +253,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     def drop_off_events_chronologically_until(
         self, until: IntervalBound | None
     ) -> t.Iterable[frozenset[Event]]:
-        while self.end_times_idx < len(self.end_times):
+        while self.has_next_end():
             end_time = self.end_times[self.end_times_idx]
             if until is not None:
                 yield from self.atomic_events_interweaver.interweave_atomic_events(
