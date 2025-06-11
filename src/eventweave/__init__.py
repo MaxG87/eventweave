@@ -89,14 +89,14 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         return self.begin_times_of_atomics_idx < len(self.begin_times_of_atomics)
 
     def yield_leading_events(
-        self, combination: frozenset[Event], until: IntervalBound
+        self, combination: frozenset[Event], until: IntervalBound | None
     ) -> t.Iterable[frozenset[Event]]:
         while True:
             try:
                 start_end = self.begin_times_of_atomics[self.begin_times_of_atomics_idx]
             except IndexError:
                 break
-            if start_end >= until:
+            if until is not None and start_end >= until:
                 break
             yield combination.union(self.bound_to_events[start_end])
             self.begin_times_of_atomics_idx += 1
@@ -138,15 +138,6 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     next_begin_idx: int = 0
     end_times_idx: int = 0
 
-    def __post_init__(self) -> None:
-        if (
-            not self.has_remaining_atomic_events()
-            and not _has_elements(self.begin_to_elems)
-            and not _has_elements(self.end_to_elems)
-            and not _has_elements(self.combination)
-        ):
-            raise ValueError("There must be elements to interweave!")
-
     @classmethod
     def from_element_mappings(
         cls,
@@ -172,9 +163,10 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def yield_leading_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield atomic events that start before the first begin time."""
-        if not _has_elements(self.begin_times):
-            return []
-        first_begin = self.begin_times[0]
+        try:
+            first_begin = self.begin_times[0]
+        except IndexError:
+            first_begin = None
         return self.atomic_events_interweaver.yield_leading_events(
             self.combination, first_begin
         )
@@ -388,11 +380,6 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
         bound_to_events=consumed_stream.atomic_events
     )
 
-    # Handle edge case: no interval events, only atomic events
-    if not consumed_stream.has_interval_events():
-        yield from _handle_atomic_only_case(atomic_events_interweaver)
-        return
-
     # Initialize state
     state = _EventWeaver.from_element_mappings(
         consumed_stream, atomic_events_interweaver
@@ -419,14 +406,6 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
 
     # Yield any remaining atomic events
     yield from state.interweave_trailing_atomic_events()
-
-
-def _handle_atomic_only_case[Event: t.Hashable, IntervalBound: _IntervalBound](
-    atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
-) -> t.Iterator[frozenset[Event]]:
-    """Handle the case where there are only atomic events."""
-    if _has_elements(atomic_events_interweaver.bound_to_events):
-        yield from atomic_events_interweaver.interweave_remaining_events(frozenset())
 
 
 def _has_elements(collection: t.Sized) -> bool:

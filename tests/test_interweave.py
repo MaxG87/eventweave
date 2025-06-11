@@ -88,6 +88,7 @@ def test_interweave_yields_all_events_eventually[T](
 @pytest.mark.parametrize(
     "elements,expected",
     [
+        ([(1, 1, 0)], [{(1, 1, 0)}]),
         (
             [("a", "c", "First Element"), ("d", "f", "Last Element")],
             [{("a", "c", "First Element")}, {("d", "f", "Last Element")}],
