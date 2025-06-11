@@ -84,10 +84,6 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     def __post_init__(self) -> None:
         self.begin_times_of_atomics = sorted(self.bound_to_events)
 
-    def has_events(self) -> bool:
-        """Check if there are any atomic events."""
-        return len(self.bound_to_events) > 0
-
     def has_remaining_events(self) -> bool:
         """Check if there are any atomic events left to yield."""
         return self.begin_times_of_atomics_idx < len(self.begin_times_of_atomics)
@@ -144,7 +140,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def __post_init__(self) -> None:
         if (
-            not self.has_atomic_events()
+            not self.has_remaining_atomic_events()
             and not _has_elements(self.begin_to_elems)
             and not _has_elements(self.end_to_elems)
             and not _has_elements(self.combination)
@@ -170,9 +166,9 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             next_begin_idx=0,
         )
 
-    def has_atomic_events(self) -> bool:
+    def has_remaining_atomic_events(self) -> bool:
         """Check if there are any atomic events."""
-        return self.atomic_events_interweaver.has_events()
+        return self.atomic_events_interweaver.has_remaining_events()
 
     def yield_leading_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield atomic events that start before the first begin time."""
