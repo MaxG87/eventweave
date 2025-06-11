@@ -255,14 +255,29 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         next_begin = self.begin_times[self.next_begin_idx]
 
         # Process end times until we reach the next begin time
+        yield from self.drop_off_events_chronologically_until(next_begin)
+
+        # Add new events to combination
+        self.combination = self.combination.union(self.begin_to_elems[next_begin])
+        self.next_begin_idx += 1
+
+    def drop_off_events_chronologically(self) -> t.Iterable[frozenset[Event]]:
+        next_end_time = self.end_times[self.end_times_idx]
+        yield from self.atomic_events_interweaver.interweave_atomic_events(
+            self.combination, next_end_time
+        )
+        self.combination = self.combination.difference(self.end_to_elems[next_end_time])
+        self.end_times_idx += 1
+
+    def drop_off_events_chronologically_until(
+        self, until: IntervalBound
+    ) -> t.Iterable[frozenset[Event]]:
         while self.end_times_idx < len(self.end_times):
             end_time = self.end_times[self.end_times_idx]
-
             yield from self.atomic_events_interweaver.interweave_atomic_events(
-                self.combination, min(next_begin, end_time)
+                self.combination, min(until, end_time)
             )
-
-            if next_begin < end_time:
+            if until < end_time:
                 break
 
             # Remove ended events from combination
@@ -279,18 +294,6 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
                 yield self.combination
 
             self.end_times_idx += 1
-
-        # Add new events to combination
-        self.combination = self.combination.union(self.begin_to_elems[next_begin])
-        self.next_begin_idx += 1
-
-    def drop_off_events_chronologically(self) -> t.Iterable[frozenset[Event]]:
-        next_end_time = self.end_times[self.end_times_idx]
-        yield from self.atomic_events_interweaver.interweave_atomic_events(
-            self.combination, next_end_time
-        )
-        self.combination = self.combination.difference(self.end_to_elems[next_end_time])
-        self.end_times_idx += 1
 
     def has_next_begin(self) -> bool:
         """Check if there is a next begin time."""
