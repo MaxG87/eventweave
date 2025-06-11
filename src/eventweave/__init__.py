@@ -208,6 +208,11 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             self.combination = self.combination.difference(self.end_to_elems[end_time])
 
             # Yield combination if needed
+            # The semantics of back-to-back events is that the later event starts an
+            # infinitesimal moment after the earlier event ends. Therefore, if the
+            # current event ends at the same time the next begins, there is no point in
+            # between the two events are both inactive. Thus, the intermediate
+            # combination must not be yielded.
             event_ends_when_next_starts = end_time in self.begin_to_elems
             if _has_elements(self.combination) and not event_ends_when_next_starts:
                 yield self.combination
