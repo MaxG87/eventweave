@@ -1,4 +1,5 @@
 import math
+import typing as t
 from itertools import permutations
 
 import pytest
@@ -10,6 +11,22 @@ from eventweave import interweave
 _E = math.exp(1)
 _PI = math.pi
 _PHI = (math.sqrt(5) + 1) / 2
+
+
+def _make_event[Value: t.Hashable](
+    tup: tuple[int | None, int | None, Value],
+) -> tuple[int | None, int | None, Value]:
+    match tup:
+        case (None, None, value):
+            return (None, None, value)
+        case (begin, None, value):
+            return (begin, None, value)
+        case (None, end, value):
+            return (None, end, value)
+        case (bound1, bound2, value):
+            return (min(bound1, bound2), max(bound1, bound2), value)
+        case _:
+            t.assert_never(tup)  # type: ignore[arg-type]
 
 
 @st.composite
@@ -41,20 +58,20 @@ def test_no_event_iters() -> None:
     stream=non_overlapping_intervals(st.integers()),
 )
 @example(stream=[(1, 2, 1), (3, 4, 2), (5, 6, 3)])
-def test_interweave_reproduces_chronologically_ordered_stream[T](
-    stream: list[T],
+def test_interweave_reproduces_chronologically_ordered_stream(
+    stream: list[tuple[int | None, int | None, float]],
 ) -> None:
     key = lambda x: (x[0], x[1])
     result = list(interweave(stream, key))
-    expected = [{elem} for elem in sorted(stream)]  # type: ignore[type-var]
+    expected = [{elem} for elem in sorted(stream)]
     assert result == expected
 
 
 @given(
     stream=st.lists(
-        st.tuples(st.integers(), st.integers(), st.floats())
-        .filter(lambda x: x[0] < x[1])
-        .map(lambda x: (min(x[0], x[1]), max(x[0], x[1]), x[2])),
+        st.tuples(
+            st.integers() | st.none(), st.integers() | st.none(), st.floats()
+        ).map(_make_event),
     )
 )
 def test_interweave_yields_all_events_eventually[T](
@@ -71,6 +88,7 @@ def test_interweave_yields_all_events_eventually[T](
 @pytest.mark.parametrize(
     "elements,expected",
     [
+        ([(1, 1, 0)], [{(1, 1, 0)}]),
         (
             [("a", "c", "First Element"), ("d", "f", "Last Element")],
             [{("a", "c", "First Element")}, {("d", "f", "Last Element")}],
@@ -183,6 +201,70 @@ def test_interweave_yields_all_events_eventually[T](
                 {(1, 3, _PHI), (3, 3, 1337)},
                 {(3, 5, _PHI)},
                 {(3, 5, _PHI), (5, 5, 1337)},
+            ],
+        ),
+        (
+            [
+                (None, 1, "None - 1"),
+                (None, 2, "None - 2"),
+                (2, 2, "2 - 2"),
+                (2, 4, "2 - 4"),
+                (3, 5, "3 - 5"),
+            ],
+            [
+                {(None, 1, "None - 1"), (None, 2, "None - 2")},
+                {(None, 2, "None - 2")},
+                {(None, 2, "None - 2"), (2, 2, "2 - 2")},
+                {(2, 4, "2 - 4")},
+                {(2, 4, "2 - 4"), (3, 5, "3 - 5")},
+                {(3, 5, "3 - 5")},
+            ],
+        ),
+        ([(None, None, "only None")], [{(None, None, "only None")}]),
+        (
+            [
+                (1, None, "1 - None"),
+                (2, None, "2 - None"),
+                (3, 5, "3 - 5"),
+                (6, 6, "6 - 6"),
+            ],
+            [
+                {(1, None, "1 - None")},
+                {(1, None, "1 - None"), (2, None, "2 - None")},
+                {(1, None, "1 - None"), (2, None, "2 - None"), (3, 5, "3 - 5")},
+                {(1, None, "1 - None"), (2, None, "2 - None")},
+                {(1, None, "1 - None"), (2, None, "2 - None"), (6, 6, "6 - 6")},
+                {(1, None, "1 - None"), (2, None, "2 - None")},
+            ],
+        ),
+        (
+            [
+                (None, None, "None - None"),
+                (None, None, "None - None II"),
+                (None, 1, "None - 1"),
+                (None, 2, "None - 2"),
+                (1, None, "1 - None"),
+                (2, None, "2 - None"),
+            ],
+            [
+                {  # for T in [None, 1]
+                    (None, None, "None - None"),
+                    (None, None, "None - None II"),
+                    (None, 1, "None - 1"),
+                    (None, 2, "None - 2"),
+                },
+                {  # for T in ]1, 2]
+                    (None, None, "None - None"),
+                    (None, None, "None - None II"),
+                    (None, 2, "None - 2"),
+                    (1, None, "1 - None"),
+                },
+                {  # for T in ]2, None]
+                    (None, None, "None - None"),
+                    (None, None, "None - None II"),
+                    (1, None, "1 - None"),
+                    (2, None, "2 - None"),
+                },
             ],
         ),
     ],
