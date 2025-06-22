@@ -134,9 +134,8 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     end_to_elems: dict[IntervalBound, set[Event]]
     atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound]
     begin_times: "peekable[IntervalBound]"
-    end_times: list[IntervalBound]
+    end_times: "peekable[IntervalBound]"
     combination: frozenset[Event]
-    end_times_idx: int = 0
 
     @classmethod
     def from_element_mappings(
@@ -145,7 +144,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
     ) -> t.Self:
         begin_times = peekable(sorted(consumed_stream.begin_to_elems))
-        end_times = sorted(consumed_stream.end_to_elems)
+        end_times = peekable(sorted(consumed_stream.end_to_elems))
 
         return cls(
             atomic_events_interweaver=atomic_events_interweaver,
@@ -176,7 +175,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def interweave_trailing_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield trailing events based on the last end time."""
-        if not self.end_times:
+        if not _has_elements(self.end_to_elems):
             return
         if _has_elements(self.combination):
             yield self.combination
@@ -239,18 +238,17 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         self.combination = self.combination.union(self.begin_to_elems[next_begin])
 
     def drop_off_events_chronologically(self) -> t.Iterable[frozenset[Event]]:
-        next_end_time = self.end_times[self.end_times_idx]
+        next_end_time = next(self.end_times)
         yield from self.atomic_events_interweaver.interweave_atomic_events(
             self.combination, next_end_time
         )
         self.combination = self.combination.difference(self.end_to_elems[next_end_time])
-        self.end_times_idx += 1
 
     def drop_off_events_chronologically_until(
         self, until: IntervalBound | None
     ) -> t.Iterable[frozenset[Event]]:
         while self.has_next_end():
-            end_time = self.end_times[self.end_times_idx]
+            end_time = self.end_times.peek()
             if until is not None:
                 yield from self.atomic_events_interweaver.interweave_atomic_events(
                     self.combination, min(until, end_time)
@@ -271,7 +269,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             if _has_elements(self.combination) and not event_ends_when_next_starts:
                 yield self.combination
 
-            self.end_times_idx += 1
+            next(self.end_times)  # discard the peeked value
 
     def has_next_begin(self) -> bool:
         """Check if there is a next begin time."""
@@ -279,7 +277,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def has_next_end(self) -> bool:
         """Check if there is a next begin time."""
-        return self.end_times_idx < len(self.end_to_elems)
+        return bool(self.end_times)
 
 
 def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
