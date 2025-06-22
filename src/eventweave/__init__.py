@@ -133,10 +133,9 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     begin_to_elems: dict[IntervalBound, set[Event]]
     end_to_elems: dict[IntervalBound, set[Event]]
     atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound]
-    begin_times: list[IntervalBound]
+    begin_times: "peekable[IntervalBound]"
     end_times: list[IntervalBound]
     combination: frozenset[Event]
-    next_begin_idx: int = 0
     end_times_idx: int = 0
 
     @classmethod
@@ -145,7 +144,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         consumed_stream: _ConsumedEventStream[Event, IntervalBound],
         atomic_events_interweaver: _AtomicEventInterweaver[Event, IntervalBound],
     ) -> t.Self:
-        begin_times = sorted(consumed_stream.begin_to_elems)
+        begin_times = peekable(sorted(consumed_stream.begin_to_elems))
         end_times = sorted(consumed_stream.end_to_elems)
 
         return cls(
@@ -155,7 +154,6 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             combination=frozenset(consumed_stream.elements_without_begin),
             end_times=end_times,
             end_to_elems=consumed_stream.end_to_elems,
-            next_begin_idx=0,
         )
 
     def has_remaining_atomic_events(self) -> bool:
@@ -164,18 +162,16 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def yield_leading_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Yield atomic events that start before the first begin time."""
-        try:
-            first_begin = self.begin_times[0]
-        except IndexError:
-            first_begin = None
+        first_begin = self.begin_times.peek(None)
         return self.atomic_events_interweaver.yield_leading_events(
             self.combination, first_begin
         )
 
     def activate_very_first_interval_events(self) -> None:
-        if not _has_elements(self.begin_times):
+        try:
+            first_begin = self.begin_times.peek()
+        except StopIteration:
             return
-        first_begin = self.begin_times[0]
         self.combination = self.combination.union(self.begin_to_elems[first_begin])
 
     def interweave_trailing_atomic_events(self) -> t.Iterable[frozenset[Event]]:
@@ -193,13 +189,13 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def interweave_atomic_events(self) -> t.Iterable[frozenset[Event]]:
         """Interweave atomic events with the current combination."""
-        if not _has_elements(self.begin_times):
+        try:
+            next_begin = next(self.begin_times)
+        except StopIteration:
             return
-        next_begin = self.begin_times[self.next_begin_idx]
         yield from self.atomic_events_interweaver.interweave_atomic_events(
             self.combination, next_begin
         )
-        self.next_begin_idx += 1
 
     def interweave_events_without_begin(self) -> t.Iterable[frozenset[Event]]:
         """Interweave atomic events before any begin time."""
@@ -234,14 +230,13 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     ) -> t.Iterable[frozenset[Event]]:
         """Process a single begin time in the interweaving algorithm."""
         yield self.combination
-        next_begin = self.begin_times[self.next_begin_idx]
+        next_begin = next(self.begin_times)
 
         # Process end times until we reach the next begin time
         yield from self.drop_off_events_chronologically_until(next_begin)
 
         # Add new events to combination
         self.combination = self.combination.union(self.begin_to_elems[next_begin])
-        self.next_begin_idx += 1
 
     def drop_off_events_chronologically(self) -> t.Iterable[frozenset[Event]]:
         next_end_time = self.end_times[self.end_times_idx]
@@ -280,7 +275,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
     def has_next_begin(self) -> bool:
         """Check if there is a next begin time."""
-        return self.next_begin_idx < len(self.begin_to_elems)
+        return bool(self.begin_times)
 
     def has_next_end(self) -> bool:
         """Check if there is a next begin time."""
