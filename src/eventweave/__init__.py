@@ -2,6 +2,8 @@ import typing as t
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+from more_itertools import peekable
+
 type KeyFuncT[Event, IntervalBound] = t.Callable[
     [Event], tuple[IntervalBound | None, IntervalBound | None]
 ]
@@ -77,29 +79,28 @@ class _ConsumedEventStream[Event: t.Hashable, IntervalBound: _IntervalBound]:
 
 @dataclass
 class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
-    begin_times_of_atomics: list[IntervalBound] = field(init=False)
+    begin_times_of_atomics: "peekable[IntervalBound]" = field(init=False)
     bound_to_events: dict[IntervalBound, set[Event]]
-    begin_times_of_atomics_idx: int = 0
 
     def __post_init__(self) -> None:
-        self.begin_times_of_atomics = sorted(self.bound_to_events)
+        self.begin_times_of_atomics = peekable(sorted(self.bound_to_events))
 
     def has_remaining_events(self) -> bool:
         """Check if there are any atomic events left to yield."""
-        return self.begin_times_of_atomics_idx < len(self.begin_times_of_atomics)
+        return bool(self.begin_times_of_atomics)
 
     def yield_leading_events(
         self, combination: frozenset[Event], until: IntervalBound | None
     ) -> t.Iterable[frozenset[Event]]:
         while True:
             try:
-                start_end = self.begin_times_of_atomics[self.begin_times_of_atomics_idx]
-            except IndexError:
+                start_end = self.begin_times_of_atomics.peek()
+            except StopIteration:
                 break
             if until is not None and start_end >= until:
                 break
             yield combination.union(self.bound_to_events[start_end])
-            self.begin_times_of_atomics_idx += 1
+            next(self.begin_times_of_atomics)  # discard the peeked value
 
     def interweave_atomic_events(
         self,
@@ -108,20 +109,20 @@ class _AtomicEventInterweaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
     ) -> t.Iterable[frozenset[Event]]:
         while True:
             try:
-                start_end = self.begin_times_of_atomics[self.begin_times_of_atomics_idx]
-            except IndexError:
+                start_end = self.begin_times_of_atomics.peek()
+            except StopIteration:
                 break
             if start_end > until:
                 break
             yield active_combination.union(self.bound_to_events[start_end])
             if _has_elements(active_combination) and start_end != until:
                 yield active_combination
-            self.begin_times_of_atomics_idx += 1
+            next(self.begin_times_of_atomics)  # discard the peeked value
 
     def interweave_remaining_events(
         self, active_combination: frozenset[Event]
     ) -> t.Iterable[frozenset[Event]]:
-        for bound in self.begin_times_of_atomics[self.begin_times_of_atomics_idx :]:
+        for bound in self.begin_times_of_atomics:
             yield active_combination.union(frozenset(self.bound_to_events[bound]))
 
 
