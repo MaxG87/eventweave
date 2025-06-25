@@ -82,7 +82,7 @@ def test_interweave_yields_all_events_eventually[T](
     result_events: set[T] = set()
     for result in interweave(stream, key):
         result_events.update(result)
-    assert result_events.issubset(all_events)
+    assert result_events == all_events
 
 
 @pytest.mark.parametrize(
