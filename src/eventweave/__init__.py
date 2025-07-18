@@ -228,7 +228,6 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
         self,
     ) -> t.Iterable[frozenset[Event]]:
         """Process a single begin time in the interweaving algorithm."""
-        yield self.combination
         next_begin = next(self.begin_times)
 
         # Process end times until we reach the next begin time
@@ -384,12 +383,20 @@ def interweave[Event: t.Hashable, IntervalBound: _IntervalBound](
     yield from state.interweave_atomic_events()
 
     # Process each subsequent begin time
+    is_first_iteration = True
+    if _has_elements(state.combination):
+        yield state.combination
     while state.has_next_begin():
+        if is_first_iteration:
+            is_first_iteration = False
+        else:
+            yield state.combination
         yield from state.process_next_begin_time()
 
     # Drop off elements in chronological order until the end times are exhausted
     while state.has_next_end():
-        yield state.combination
+        if not is_first_iteration:
+            yield state.combination
         yield from state.drop_off_events_chronologically()
 
     # Yield any remaining atomic events
