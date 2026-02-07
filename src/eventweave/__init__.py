@@ -43,10 +43,11 @@ class _ConsumedEventStream[Event: t.Hashable, IntervalBound: _IntervalBound]:
         end_to_elems: dict[IntervalBound, set[Event]] = defaultdict(set)
         atomic_events: dict[IntervalBound, set[Event]] = defaultdict(set)
 
-        # Note: mypy does not support type narrowing in tuples. Therefore it falsely reports
-        # that maybe_begin and maybe_end can be None even though all cases of being None are
-        # handled explicitly. In a future version of mypy it may be possible to remove the
-        # `# type: ignore` comments.
+        # Note: mypy does not fully support type narrowing in tuples. Therefore it
+        # falsely reports that `maybe_end` may be `None` in one case. Looking at the
+        # match statement, it is clear that in this case `maybe_end` is guaranteed to be
+        # not `None`, though. Hopefully, a future version of mypy will allow to get rid
+        # of the last remaining `# type: ignore` comment.
         for elem in stream:
             maybe_begin, maybe_end = key(elem)
             match (maybe_begin, maybe_end):
@@ -54,14 +55,14 @@ class _ConsumedEventStream[Event: t.Hashable, IntervalBound: _IntervalBound]:
                     elements_without_begin.add(elem)
                 case (None, end):
                     elements_without_begin.add(elem)
-                    end_to_elems[end].add(elem)  # type: ignore[index]
+                    end_to_elems[end].add(elem)  # type: ignore
                 case (begin, None):
-                    begin_to_elems[begin].add(elem)  # type: ignore[index]
-                case (begin, end) if begin < end:  # type: ignore[operator]
-                    begin_to_elems[begin].add(elem)  # type: ignore[index]
-                    end_to_elems[end].add(elem)  # type: ignore[index]
+                    begin_to_elems[begin].add(elem)
+                case (begin, end) if begin < end:
+                    begin_to_elems[begin].add(elem)
+                    end_to_elems[end].add(elem)
                 case (begin, end) if begin == end:
-                    atomic_events[begin].add(elem)  # type: ignore[index]
+                    atomic_events[begin].add(elem)
                 case _:
                     raise ValueError(
                         "End time must be greater than or equal to begin time."
@@ -220,7 +221,7 @@ class _EventWeaver[Event: t.Hashable, IntervalBound: _IntervalBound]:
             case (interval_begin, None):
                 return interval_begin
             case (interval_begin, atomic_begin):
-                return min(interval_begin, atomic_begin)  # type: ignore[type-var]
+                return min(interval_begin, atomic_begin)
             case _:
                 t.assert_never(self)  # type: ignore[arg-type]
 
