@@ -1,6 +1,6 @@
 [project]
 name = "eventweave"
-version = "0.5.0"
+version = "1.0.0"
 description = "Weave multiple streams of intervals into combinations"
 authors = [{name = "Max Görner", email = "5477952+MaxG87@users.noreply.github.com"}]
 requires-python = ">=3.12"
