@@ -1,3 +1,4 @@
+---
 name: Upload Python Package
 
 on:
@@ -16,7 +17,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install uv
-      run: pipx install 'uv==0.7.3'
+      run: pipx install 'uv==0.10.0'
     - name: Build distribution with uv
       run: |
         uv build
