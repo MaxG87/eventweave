@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0](https://github.com/MaxG87/eventweave/compare/v0.5.0...v1.0.0) (2026-02-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* Raise minimum required Python version
+* Fix some newly detected issues
+
+### lint
+
+* Fix some newly detected issues ([c666c6e](https://github.com/MaxG87/eventweave/commit/c666c6e520b29500df4c88ca8cab818127912438))
+
+
+### Dependencies
+
+* Add more-itertools as dependency ([f01ce15](https://github.com/MaxG87/eventweave/commit/f01ce15b513efa405101801ab7eb3b7049e0fce3))
+* Bump more-itertools to 10.8.0 ([d70ce39](https://github.com/MaxG87/eventweave/commit/d70ce394eac964909cefa7547e963bae8d1eb019))
+* **dev:** Bump all dev-dependencies ([c666c6e](https://github.com/MaxG87/eventweave/commit/c666c6e520b29500df4c88ca8cab818127912438))
+* Raise minimum required Python version ([c666c6e](https://github.com/MaxG87/eventweave/commit/c666c6e520b29500df4c88ca8cab818127912438))
+
 ## [0.5.0](https://github.com/MaxG87/eventweave/compare/v0.4.0...v0.5.0) (2025-06-11)
 
 
